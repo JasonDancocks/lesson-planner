@@ -1,0 +1,28 @@
+#container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    
+  }
+  #canvas-container {
+    
+    border: 5px solid black;
+    width: 500px;
+    height: 500px;
+  }
+  
+  #buttons{
+    display: flex;
+  }
+  
+  .btn{
+    border: 1px solid red;
+    padding: 5px;
+    margin: 5px;
+    
+  }
+  
+  .btn-selected{
+    border:1px solid blue;
+  }
