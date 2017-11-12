@@ -1,29 +1,47 @@
-var colorArray = ["red", "orange", "green", "blue", "yellow"];
-var currentTool;
-var selected = "default";
-
-var toolBar = setToolBar();
-
-var stage = setStage();
-
-var mainLayer = new Konva.Layer();
-
-var background = addBackground();
-
-stage.add(mainLayer);
-
-stage.on("click", function(event) {
-  useTool(event);
-});
-
+var params = initialize();
 
 //testing
 
-
-
-
+//next steps
+//bug - shapes drawn when dragging
+//backgwards drag draw rectangle
+// refactor
 
 //Initialise methods
+function initialize() {
+  var params = setParams();
+
+  addBackground(params);
+  addMainLayer(params);
+
+  return params;
+}
+
+function setParams() {
+  var params = {};
+
+  params.shapeInfo = {};
+  params.isMouseDragging = false;
+  params.toolBar = setToolBar();
+  params.currentTool = "select";
+  params.selected = "none";
+  params.stage = setStage();
+
+  return params;
+}
+
+function setToolBar() {
+  var toolBar = Array.from(document.getElementById("buttons").children);
+
+  toolBar.forEach(function (element) {
+    element.addEventListener("click", function () {
+      setCurrentTool(element);
+    });
+  });
+
+  return toolBar;
+}
+
 function setStage() {
   var stage = new Konva.Stage({
     container: "canvas-container",
@@ -35,40 +53,89 @@ function setStage() {
   return stage;
 }
 
-function addBackground() {
-  var width = stage.width();
-  var height = stage.height();
+function addBackground(params) {
+  var width = params.stage.width();
+  var height = params.stage.height();
   var backgroundLayer = new Konva.Layer();
   var background = new Konva.Rect({
     x: 0,
     y: 0,
     width: width,
     height: height,
-    fill: "white"
+    fill: "white",
+    id: "background"
   });
+
   backgroundLayer.add(background);
-  stage.add(backgroundLayer);
-  
-  return background;
+  params.stage.add(backgroundLayer);
+}
+
+function addMainLayer(params) {
+  var mainLayer = new Konva.Layer({
+    id: "mainLayer"
+  });
+  params.stage.add(mainLayer);
+}
+
+// event handlers
+
+params.stage.on("mousedown", function (event) {
+  getStartPosition();
+  params.isMouseDragging = true;
+});
+
+params.stage.on("mousemove", function (event) {
+  if (params.isMouseDragging) {
+    setDragSize();
+    removePrevious();
+    useTool(event);
+  }
+});
+
+params.stage.on("mouseup", function (event) {
+  params.isMouseDragging = false;
+  params.shapeInfo = {};
+
+  if (params.currentTool === "select" || params.currentTool === "delete") {
+    useTool(event);
+  }
+});
+
+//event helpers
+function getStartPosition() {
+  params.shapeInfo.startPosition = params.stage.getPointerPosition();
+}
+
+function setDragSize() {
+  calculateDragWidth();
+  calculateDragHeight();
+}
+
+function calculateDragWidth() {
+  params.shapeInfo.width = Math.abs(params.stage.getPointerPosition().x - params.shapeInfo.startPosition.x);
+}
+
+function calculateDragHeight() {
+  params.shapeInfo.height = Math.abs(params.stage.getPointerPosition().y - params.shapeInfo.startPosition.y);
+}
+
+function removePrevious() {
+  var stage = params.stage;
+  var shapeInfo = params.shapeInfo;
+
+  if (shapeInfo.previousShape) {
+    var prev = shapeInfo.previousShape;
+    prev.destroy();
+    stage.draw();
+  }
 }
 
 //toolbar
-
-function setToolBar() {
-  var toolBar = Array.from(document.getElementById("buttons").children);
-  toolBar.forEach(function(element) {
-    element.addEventListener("click", function() {
-      setCurrentTool(element);
-    });
-  });
-  return toolBar;
-}
-
 function setCurrentTool(element) {
-  var id = element.id;
-  currentTool = id;
-  toolBar.forEach(function(tool) {
-    if (tool == element) {
+  params.currentTool = element.id;
+
+  params.toolBar.forEach(function (tool) {
+    if (tool === element) {
       tool.classList.add("btn-selected");
     } else {
       tool.classList.remove("btn-selected");
@@ -82,11 +149,7 @@ function defaultTool() {
 }
 
 function useTool(event) {
-  var mousePos = getMousePosition();
-  var x = mousePos.x;
-  var y = mousePos.y;
-  
-  switch (currentTool) {
+  switch (params.currentTool) {
     case "select":
       selectElement(event);
       break;
@@ -94,75 +157,97 @@ function useTool(event) {
       deleteElement(event);
       break;
     case "rect":
-      drawRect(x, y);
+      drawRect(params.shapeInfo);
       break;
     case "circle":
-      drawCircle(x, y);
+      drawCircle(params.shapeInfo);
       break;
     default:
       break;
   }
-  defaultTool();
+  //defaultTool();
 }
 
 // tools methods
-
 function selectElement(event) {
+  var stage = params.stage;
   var element = event.target;
+  var background = stage.findOne("#background");
+
   if (element == background) {
-    selected = "none";
+    params.selected = "none";
   } else {
-    selected = element;
+    params.selected = element;
   }
 }
 
 function deleteElement(event) {
+  var stage = params.stage;
   var element = event.target;
+  var background = stage.findOne("#background");
   if (element != background) {
     element.destroy();
     stage.draw();
   }
 }
 
-function drawRect(x, y) {
+function drawRect(shapeInfo) {
+  var stage = params.stage;
+  var mainLayer = stage.findOne("#mainLayer");
+  var shapeInfo = params.shapeInfo;
+
+  shapeInfo.color = getColor();
+
   var rect = new Konva.Rect({
-    x: x,
-    y: y,
-    width: Math.floor(Math.random() * 500 + 1),
-    height: Math.floor(Math.random() * 500 + 1),
-    fill: getColor(),
+    x: shapeInfo.startPosition.x,
+    y: shapeInfo.startPosition.y,
+    width: shapeInfo.width,
+    height: shapeInfo.height,
+    fill: shapeInfo.color,
     stroke: "black",
     strokeWidth: 4,
     draggable: true,
     name: "rect"
   });
   mainLayer.add(rect);
-  stage.add(mainLayer);
+  shapeInfo.previousShape = rect;
+  stage.draw();
 }
 
-function drawCircle(x, y) {
+function drawCircle(shapeInfo) {
+  var stage = params.stage;
+  var mainLayer = stage.findOne("#mainLayer");
+  var shapeInfo = params.shapeInfo;
+
+  shapeInfo.color = getColor();
+
+  var radius = Math.sqrt(
+    Math.pow(shapeInfo.width, 2) + Math.pow(shapeInfo.height, 2)
+  );
+
   var circle = new Konva.Circle({
-    x: x,
-    y: y,
-    radius: 70,
-    fill: getColor(),
+    x: shapeInfo.startPosition.x,
+    y: shapeInfo.startPosition.y,
+    radius: radius,
+    fill: shapeInfo.color,
     stroke: "black",
     strokeWidth: 4,
+    draggable: true,
     name: "circle"
   });
   mainLayer.add(circle);
-  stage.add(mainLayer);
+  shapeInfo.previousShape = circle;
+  stage.draw();
 }
 
 // helper methods
 
 function getColor() {
-  var color = colorArray[Math.floor(Math.random() * colorArray.length - 1)];
+  var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
+  var color = colorArray[Math.floor(Math.random() * colorArray.length)];
   return color;
 }
 
-function getMousePosition() {
-  var mousePosition = stage.getPointerPosition();
-  return mousePosition;
+function logObject(object) {
+  console.log(JSON.stringify(object));
 }
-
