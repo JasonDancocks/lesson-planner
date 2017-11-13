@@ -79,12 +79,23 @@ function addMainLayer(params) {
 
 // event handlers
 
-params.stage.on("mousedown", function (event) {
+// needs to be called on shape not stage
+params.stage.on("mouseenter", function (event){
+   var element = event.target;
+  if(params.currentTool !== "select"){
+    element.draggable(false);
+  }
+  else{
+    element.draggable(true);  
+  }
+});
+
+params.stage.on("mousedown touchstart", function () {
   getStartPosition();
   params.isMouseDragging = true;
 });
 
-params.stage.on("mousemove", function (event) {
+params.stage.on("mousemove touchmove", function(event) {
   if (params.isMouseDragging) {
     setDragSize();
     removePrevious();
@@ -92,7 +103,7 @@ params.stage.on("mousemove", function (event) {
   }
 });
 
-params.stage.on("mouseup", function (event) {
+params.stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
   params.shapeInfo = {};
 
@@ -206,7 +217,6 @@ function drawRect(shapeInfo) {
     fill: shapeInfo.color,
     stroke: "black",
     strokeWidth: 4,
-    draggable: true,
     name: "rect"
   });
   mainLayer.add(rect);
@@ -232,7 +242,6 @@ function drawCircle(shapeInfo) {
     fill: shapeInfo.color,
     stroke: "black",
     strokeWidth: 4,
-    draggable: true,
     name: "circle"
   });
   mainLayer.add(circle);
