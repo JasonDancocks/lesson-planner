@@ -1,4 +1,6 @@
+var stage = setStage();
 var params = initialize();
+
 
 //testing
 
@@ -25,7 +27,7 @@ function setParams() {
   params.toolBar = setToolBar();
   params.currentTool = "select";
   params.selected = "none";
-  params.stage = setStage();
+  
 
   return params;
 }
@@ -54,8 +56,8 @@ function setStage() {
 }
 
 function addBackground(params) {
-  var width = params.stage.width();
-  var height = params.stage.height();
+  var width = stage.width();
+  var height = stage.height();
   var backgroundLayer = new Konva.Layer();
   var background = new Konva.Rect({
     x: 0,
@@ -67,35 +69,24 @@ function addBackground(params) {
   });
 
   backgroundLayer.add(background);
-  params.stage.add(backgroundLayer);
+  stage.add(backgroundLayer);
 }
 
-function addMainLayer(params) {
+function addMainLayer() {
   var mainLayer = new Konva.Layer({
     id: "mainLayer"
   });
-  params.stage.add(mainLayer);
+  stage.add(mainLayer);
 }
 
 // event handlers
 
-// needs to be called on shape not stage
-params.stage.on("mouseenter", function (event){
-   var element = event.target;
-  if(params.currentTool !== "select"){
-    element.draggable(false);
-  }
-  else{
-    element.draggable(true);  
-  }
-});
-
-params.stage.on("mousedown touchstart", function () {
+stage.on("mousedown touchstart", function () {
   getStartPosition();
   params.isMouseDragging = true;
 });
 
-params.stage.on("mousemove touchmove", function(event) {
+stage.on("mousemove touchmove", function(event) {
   if (params.isMouseDragging) {
     setDragSize();
     removePrevious();
@@ -103,7 +94,7 @@ params.stage.on("mousemove touchmove", function(event) {
   }
 });
 
-params.stage.on("mouseup touchend", function (event) {
+stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
   params.shapeInfo = {};
 
@@ -114,7 +105,7 @@ params.stage.on("mouseup touchend", function (event) {
 
 //event helpers
 function getStartPosition() {
-  params.shapeInfo.startPosition = params.stage.getPointerPosition();
+  params.shapeInfo.startPosition = stage.getPointerPosition();
 }
 
 function setDragSize() {
@@ -123,15 +114,15 @@ function setDragSize() {
 }
 
 function calculateDragWidth() {
-  params.shapeInfo.width = Math.abs(params.stage.getPointerPosition().x - params.shapeInfo.startPosition.x);
+  params.shapeInfo.width = stage.getPointerPosition().x - params.shapeInfo.startPosition.x;
 }
 
 function calculateDragHeight() {
-  params.shapeInfo.height = Math.abs(params.stage.getPointerPosition().y - params.shapeInfo.startPosition.y);
+  params.shapeInfo.height = stage.getPointerPosition().y - params.shapeInfo.startPosition.y;
 }
 
 function removePrevious() {
-  var stage = params.stage;
+  
   var shapeInfo = params.shapeInfo;
 
   if (shapeInfo.previousShape) {
@@ -181,7 +172,7 @@ function useTool(event) {
 
 // tools methods
 function selectElement(event) {
-  var stage = params.stage;
+ 
   var element = event.target;
   var background = stage.findOne("#background");
 
@@ -193,7 +184,7 @@ function selectElement(event) {
 }
 
 function deleteElement(event) {
-  var stage = params.stage;
+ 
   var element = event.target;
   var background = stage.findOne("#background");
   if (element != background) {
@@ -203,7 +194,7 @@ function deleteElement(event) {
 }
 
 function drawRect(shapeInfo) {
-  var stage = params.stage;
+  
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
 
@@ -219,13 +210,25 @@ function drawRect(shapeInfo) {
     strokeWidth: 4,
     name: "rect"
   });
+
+  rect.addEventListener("mousedown", function (){
+   if(params.currentTool !== "select"){
+     this.draggable(false);
+   }
+   else{
+     this.draggable(true);  
+   }
+ });
+
+
   mainLayer.add(rect);
   shapeInfo.previousShape = rect;
   stage.draw();
 }
 
+
 function drawCircle(shapeInfo) {
-  var stage = params.stage;
+  
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
 
@@ -243,6 +246,15 @@ function drawCircle(shapeInfo) {
     stroke: "black",
     strokeWidth: 4,
     name: "circle"
+  });
+  
+  circle.addEventListener("mousedown", function (){
+    if(params.currentTool !== "select"){
+      this.draggable(false);
+    }
+    else{
+      this.draggable(true);  
+    }
   });
   mainLayer.add(circle);
   shapeInfo.previousShape = circle;
