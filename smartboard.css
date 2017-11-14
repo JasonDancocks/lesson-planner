@@ -1,3 +1,4 @@
+
 #container{
     display: flex;
     flex-direction: column;
@@ -25,4 +26,19 @@
   
   .btn-selected{
     border:1px solid blue;
+  }
+  #color-palette{
+    display:flex;
+    border: 1px dashed black;
+    padding: 5px;
+  }
+  .color-btn{
+    border: 1px solid black;
+    margin: 5px;
+    padding: 5px;
+  }
+  .color-btn-selected{
+    border: 5px solid blue;
+    margin: 5px;
+    padding: 5px;
   }

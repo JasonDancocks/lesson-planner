@@ -15,6 +15,7 @@ function initialize() {
   addBackground(params);
   addMainLayer(params);
   setToolBar();
+  setColorPalette();
   return params;
 }
 
@@ -25,6 +26,7 @@ function setParams() {
   params.isMouseDragging = false;
   params.currentTool = "select";
   params.selected = "none";
+  params.currentColor = "red";
   
 
   return params;
@@ -200,7 +202,7 @@ function drawRect(shapeInfo) {
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
 
-  shapeInfo.color = getColor();
+  shapeInfo.color = params.currentColor;
 
   var rect = new Konva.Rect({
     x: shapeInfo.startPosition.x,
@@ -225,6 +227,7 @@ function drawRect(shapeInfo) {
 
   mainLayer.add(rect);
   shapeInfo.previousShape = rect;
+  
   stage.draw();
 }
 
@@ -234,7 +237,7 @@ function drawCircle(shapeInfo) {
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
 
-  shapeInfo.color = getColor();
+  shapeInfo.color = params.currentColor;
 
   var radius = Math.sqrt(
     Math.pow(shapeInfo.width, 2) + Math.pow(shapeInfo.height, 2)
@@ -260,17 +263,64 @@ function drawCircle(shapeInfo) {
   });
   mainLayer.add(circle);
   shapeInfo.previousShape = circle;
+  
   stage.draw();
 }
 
 // helper methods
 
 function getColor() {
-  var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
+  
   var color = colorArray[Math.floor(Math.random() * colorArray.length)];
   return color;
 }
 
 function logObject(object) {
   console.log(JSON.stringify(object));
+}
+
+//color
+
+function setColorPalette(){
+  var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
+
+  var colorPalette = document.getElementById("color-palette");
+
+  colorArray.forEach(function(color){
+    var colorButton = document.createElement("div");
+    colorButton.id = color;
+    colorButton.classList.add("color-btn");
+    colorButton.style.backgroundColor = color;
+    colorButton.addEventListener("click",function(event){
+      setCurrentColor(this);
+      
+      if(params.selected !== "none"){
+        params.selected.fill(params.currentColor);
+      }
+      
+    });
+    colorPalette.appendChild(colorButton);
+  })
+
+  var defaultColor = document.getElementById("red");
+  
+  defaultColor.classList.add("color-btn-selected");
+}
+
+function getColorPalette(){
+ var colorPalette = Array.from(document.getElementById("color-palette").children);
+  return colorPalette;
+}
+
+function setCurrentColor(element) {
+  var colorPalette = getColorPalette();
+  
+  params.currentColor = element.id;
+  colorPalette.forEach(function (color) {
+    if (color === element) {
+      color.classList.add("color-btn-selected");
+    } else {
+      color.classList.remove("color-btn-selected");
+    }
+  });
 }
