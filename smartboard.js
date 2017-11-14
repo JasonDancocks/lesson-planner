@@ -14,7 +14,7 @@ function initialize() {
 
   addBackground(params);
   addMainLayer(params);
-
+  setToolBar();
   return params;
 }
 
@@ -23,7 +23,6 @@ function setParams() {
 
   params.shapeInfo = {};
   params.isMouseDragging = false;
-  params.toolBar = setToolBar();
   params.currentTool = "select";
   params.selected = "none";
   
@@ -108,16 +107,20 @@ function getStartPosition() {
 }
 
 function setDragSize() {
-  calculateDragWidth();
-  calculateDragHeight();
+  var startPosition = params.shapeInfo.startPosition;
+
+  params.shapeInfo.height = calculateDragHeight(startPosition);
+  params.shapeInfo.width = calculateDragWidth(startPosition);
+
 }
 
-function calculateDragWidth() {
-  params.shapeInfo.width = stage.getPointerPosition().x - params.shapeInfo.startPosition.x;
+function calculateDragWidth(startPosition) {
+  
+  return stage.getPointerPosition().x - startPosition.x;
 }
 
-function calculateDragHeight() {
-  params.shapeInfo.height = stage.getPointerPosition().y - params.shapeInfo.startPosition.y;
+function calculateDragHeight(startPosition) {
+  return stage.getPointerPosition().y - startPosition.y;
 }
 
 function removePrevious() {
@@ -133,9 +136,9 @@ function removePrevious() {
 
 //toolbar
 function setCurrentTool(element) {
+  var toolBar = setToolBar();
   params.currentTool = element.id;
-
-  params.toolBar.forEach(function (tool) {
+  toolBar.forEach(function (tool) {
     if (tool === element) {
       tool.classList.add("btn-selected");
     } else {
