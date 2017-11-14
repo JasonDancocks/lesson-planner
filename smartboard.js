@@ -5,8 +5,7 @@ var params = initialize();
 //testing
 
 //next steps
-//bug - shapes drawn when dragging
-//backgwards drag draw rectangle
+
 // refactor
 
 //Initialise methods
@@ -247,7 +246,7 @@ function drawCircle(shapeInfo) {
     strokeWidth: 4,
     name: "circle"
   });
-  
+
   circle.addEventListener("mousedown", function (){
     if(params.currentTool !== "select"){
       this.draggable(false);
