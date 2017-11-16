@@ -27,7 +27,7 @@ function setParams() {
   params.currentTool = "select";
   params.selected = "none";
   params.currentColor = "red";
-  
+
 
   return params;
 }
@@ -37,6 +37,7 @@ function setToolBar() {
 
   toolBar.forEach(function (element) {
     element.addEventListener("click", function () {
+      params.selected = "none";
       setCurrentTool(element);
     });
   });
@@ -86,7 +87,7 @@ stage.on("mousedown touchstart", function () {
   params.isMouseDragging = true;
 });
 
-stage.on("mousemove touchmove", function(event) {
+stage.on("mousemove touchmove", function (event) {
   if (params.isMouseDragging) {
     setDragSize();
     removePrevious();
@@ -117,7 +118,7 @@ function setDragSize() {
 }
 
 function calculateDragWidth(startPosition) {
-  
+
   return stage.getPointerPosition().x - startPosition.x;
 }
 
@@ -126,7 +127,7 @@ function calculateDragHeight(startPosition) {
 }
 
 function removePrevious() {
-  
+
   var shapeInfo = params.shapeInfo;
 
   if (shapeInfo.previousShape) {
@@ -163,10 +164,10 @@ function useTool(event) {
       deleteElement(event);
       break;
     case "rect":
-      drawRect(params.shapeInfo);
+      drawShape(params.shapeInfo);
       break;
     case "circle":
-      drawCircle(params.shapeInfo);
+      drawShape(params.shapeInfo);
       break;
     default:
       break;
@@ -176,7 +177,7 @@ function useTool(event) {
 
 // tools methods
 function selectElement(event) {
- 
+
   var element = event.target;
   var background = stage.findOne("#background");
 
@@ -188,7 +189,7 @@ function selectElement(event) {
 }
 
 function deleteElement(event) {
- 
+
   var element = event.target;
   var background = stage.findOne("#background");
   if (element != background) {
@@ -197,12 +198,31 @@ function deleteElement(event) {
   }
 }
 
-function drawRect(shapeInfo) {
-  
+function drawShape(shapeinfo) {
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
+  var shape;
 
   shapeInfo.color = params.currentColor;
+
+  switch (params.currentTool) {
+    case "rect":
+      shape = drawRect(shapeInfo);
+      break;
+      case "circle":
+      shape = drawCircle(shapeInfo);
+      break;
+  }
+
+  toggleDraggable(shape);
+
+  mainLayer.add(shape);
+  shapeInfo.previousShape = shape;
+
+  stage.draw();
+}
+
+function drawRect(shapeInfo) {
 
   var rect = new Konva.Rect({
     x: shapeInfo.startPosition.x,
@@ -215,30 +235,10 @@ function drawRect(shapeInfo) {
     name: "rect"
   });
 
-  rect.addEventListener("mousedown", function (){
-   if(params.currentTool !== "select"){
-     this.draggable(false);
-   }
-   else{
-     this.draggable(true);  
-   }
- });
-
-
-  mainLayer.add(rect);
-  shapeInfo.previousShape = rect;
-  
-  stage.draw();
+  return rect;
 }
 
-
 function drawCircle(shapeInfo) {
-  
-  var mainLayer = stage.findOne("#mainLayer");
-  var shapeInfo = params.shapeInfo;
-
-  shapeInfo.color = params.currentColor;
-
   var radius = Math.sqrt(
     Math.pow(shapeInfo.width, 2) + Math.pow(shapeInfo.height, 2)
   );
@@ -253,24 +253,13 @@ function drawCircle(shapeInfo) {
     name: "circle"
   });
 
-  circle.addEventListener("mousedown", function (){
-    if(params.currentTool !== "select"){
-      this.draggable(false);
-    }
-    else{
-      this.draggable(true);  
-    }
-  });
-  mainLayer.add(circle);
-  shapeInfo.previousShape = circle;
-  
-  stage.draw();
+  return circle;
 }
 
 // helper methods
 
 function getColor() {
-  
+
   var color = colorArray[Math.floor(Math.random() * colorArray.length)];
   return color;
 }
@@ -280,47 +269,68 @@ function logObject(object) {
 }
 
 //color
+function createColorButton(color){
+  var colorButton = document.createElement("div");
+  colorButton.id = color;
+  colorButton.classList.add("color-btn");
+  colorButton.style.backgroundColor = color;
 
-function setColorPalette(){
+  return colorButton;
+  
+}  
+
+function setColorPalette() {
   var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
 
   var colorPalette = document.getElementById("color-palette");
 
-  colorArray.forEach(function(color){
-    var colorButton = document.createElement("div");
-    colorButton.id = color;
-    colorButton.classList.add("color-btn");
-    colorButton.style.backgroundColor = color;
-    colorButton.addEventListener("click",function(event){
+  colorArray.forEach(function (color) {
+
+    var colorButton = createColorButton(color);
+    
+    colorButton.addEventListener("click", function () {
+      function 
       setCurrentColor(this);
-      
-      if(params.selected !== "none"){
-        params.selected.fill(params.currentColor);
-      }
-      
+    
     });
     colorPalette.appendChild(colorButton);
   })
 
   var defaultColor = document.getElementById("red");
-  
+
   defaultColor.classList.add("color-btn-selected");
 }
 
-function getColorPalette(){
- var colorPalette = Array.from(document.getElementById("color-palette").children);
+function getColorPalette() {
+  var colorPalette = Array.from(document.getElementById("color-palette").children);
   return colorPalette;
 }
 
 function setCurrentColor(element) {
   var colorPalette = getColorPalette();
-  
+
   params.currentColor = element.id;
   colorPalette.forEach(function (color) {
     if (color === element) {
       color.classList.add("color-btn-selected");
     } else {
       color.classList.remove("color-btn-selected");
+    }
+  });
+
+  if (params.selected !== "none") {
+    params.selected.fill(params.currentColor);
+    stage.draw();
+  }
+}
+
+
+function toggleDraggable(element) {
+  element.addEventListener("mousedown", function () {
+    if (params.currentTool !== "select") {
+      this.draggable(false);
+    } else {
+      this.draggable(true);
     }
   });
 }
