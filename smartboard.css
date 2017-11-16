@@ -13,9 +13,11 @@
     height: 500px;
   }
   
-  #buttons{
+  .buttons{
     display: flex;
   }
+
+  
   
   .btn{
     border: 1px solid red;

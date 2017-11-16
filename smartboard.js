@@ -15,6 +15,7 @@ function initialize() {
   addBackground(params);
   addMainLayer(params);
   setToolBar();
+  setZIndexBar();
   setColorPalette();
   return params;
 }
@@ -43,6 +44,18 @@ function setToolBar() {
   });
 
   return toolBar;
+}
+
+function setZIndexBar() {
+  var zIndexBar = Array.from(document.getElementById("zindex-buttons").children);
+
+  zIndexBar.forEach(function (element) {
+    element.addEventListener("click", function () {
+      if (params.selected !== "none") {
+        moveElement(element);
+      }
+    })
+  });
 }
 
 function setStage() {
@@ -209,7 +222,7 @@ function drawShape(shapeinfo) {
     case "rect":
       shape = drawRect(shapeInfo);
       break;
-      case "circle":
+    case "circle":
       shape = drawCircle(shapeInfo);
       break;
   }
@@ -269,15 +282,15 @@ function logObject(object) {
 }
 
 //color
-function createColorButton(color){
+function createColorButton(color) {
   var colorButton = document.createElement("div");
   colorButton.id = color;
   colorButton.classList.add("color-btn");
   colorButton.style.backgroundColor = color;
 
   return colorButton;
-  
-}  
+
+}
 
 function setColorPalette() {
   var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
@@ -287,11 +300,10 @@ function setColorPalette() {
   colorArray.forEach(function (color) {
 
     var colorButton = createColorButton(color);
-    
+
     colorButton.addEventListener("click", function () {
-      function 
-      setCurrentColor(this);
-    
+      setCurrentColor(colorButton);
+
     });
     colorPalette.appendChild(colorButton);
   })
@@ -324,7 +336,6 @@ function setCurrentColor(element) {
   }
 }
 
-
 function toggleDraggable(element) {
   element.addEventListener("mousedown", function () {
     if (params.currentTool !== "select") {
@@ -333,4 +344,22 @@ function toggleDraggable(element) {
       this.draggable(true);
     }
   });
+}
+
+function moveElement(element) {
+  switch (element.id) {
+    case "move-to-back":
+      params.selected.moveToBottom();
+      break;
+    case "move-backward":
+      params.selected.moveDown();
+      break;
+    case "move-forward":
+      params.selected.moveUp();
+      break;
+    case "move-to-front":
+      params.selected.moveToTop();
+      break;
+  }
+  stage.draw();
 }
