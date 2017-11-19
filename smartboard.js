@@ -29,6 +29,8 @@ function setParams() {
   params.selected = "none";
   params.currentColor = "red";
 
+  //test
+  params.selectGroup = [];
 
   return params;
 }
@@ -109,12 +111,16 @@ stage.on("mousemove touchmove", function (event) {
 });
 
 stage.on("mouseup touchend", function (event) {
+  
+ 
   params.isMouseDragging = false;
-  params.shapeInfo = {};
-
   if (params.currentTool === "select" || params.currentTool === "delete") {
     useTool(event);
+    removePrevious();
   }
+
+  params.selectGroup = [];
+  params.shapeInfo = {};
 });
 
 //event helpers
@@ -144,6 +150,7 @@ function removePrevious() {
   var shapeInfo = params.shapeInfo;
 
   if (shapeInfo.previousShape) {
+    
     var prev = shapeInfo.previousShape;
     prev.destroy();
     stage.draw();
@@ -177,10 +184,10 @@ function useTool(event) {
       deleteElement(event);
       break;
     case "rect":
-      drawShape(params.shapeInfo);
+      drawShape();
       break;
     case "circle":
-      drawShape(params.shapeInfo);
+      drawShape();
       break;
     default:
       break;
@@ -190,15 +197,85 @@ function useTool(event) {
 
 // tools methods
 function selectElement(event) {
-
   var element = event.target;
   var background = stage.findOne("#background");
 
-  if (element == background) {
+  removePreviousHighlightBox();
+  if (params.isMouseDragging === true) {
+    groupSelect(element,background);
+
+  } else {
+    singleSelect(element,background);
+     }
+
+}
+
+function singleSelect(element,background){
+  
+  
+  if (element === background || element === stage) {
     params.selected = "none";
+  
   } else {
     params.selected = element;
+    
+    if(element.id() !== "selectBox" && element.id() !== "highlightBox"){
+
+    
+    highlightSelected();
+    }
+  
   }
+
+}
+
+function groupSelect(element,background){
+  drawShape();
+  
+      if (!params.selectGroup.includes(element) && element !== background) {
+        params.selectGroup.push(element);
+      }
+}
+
+function removePreviousHighlightBox(){
+
+  var previousHighlightBox = stage.find("#highlightBox");
+  var mainLayer = stage.findOne("#mainLayer");
+
+  if (previousHighlightBox){
+  previousHighlightBox.destroy();
+  mainLayer.draw();
+  }
+
+}
+
+function highlightSelected(){
+
+    var selected = params.selected;
+    var selectRect = selected.getSelfRect();
+    
+    var x = selected.getAttr("x") + selectRect.x - 10;
+    var y = selected.getAttr("y") + selectRect.y - 10;
+
+    
+    var rect = new Konva.Rect({
+      x: x,
+      y: y,
+      width: selectRect.width + 20,
+      height: selectRect.height+ 20,
+      fill: null,
+      stroke: "black",
+      strokeWidth: 2,
+      dash: [5,5],
+      name: "rect",
+      id: "highlightBox"
+    });
+  
+    var mainLayer = stage.findOne("#mainLayer");
+
+    mainLayer.add(rect);
+    mainLayer.draw();
+    
 }
 
 function deleteElement(event) {
@@ -206,12 +283,13 @@ function deleteElement(event) {
   var element = event.target;
   var background = stage.findOne("#background");
   if (element != background) {
+
     element.destroy();
     stage.draw();
   }
 }
 
-function drawShape(shapeinfo) {
+function drawShape() {
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
   var shape;
@@ -225,6 +303,13 @@ function drawShape(shapeinfo) {
     case "circle":
       shape = drawCircle(shapeInfo);
       break;
+    case "select":
+      shape = drawRect(shapeInfo);
+      shape.fill(null);
+      shape.dash([10,5]);
+      shape.strokeWidth(2);
+      shape.id("selectBox");
+      break;
   }
 
   toggleDraggable(shape);
@@ -232,7 +317,7 @@ function drawShape(shapeinfo) {
   mainLayer.add(shape);
   shapeInfo.previousShape = shape;
 
-  stage.draw();
+  mainLayer.draw();
 }
 
 function drawRect(shapeInfo) {
@@ -363,3 +448,5 @@ function moveElement(element) {
   }
   stage.draw();
 }
+
+//groups
