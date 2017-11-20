@@ -2,6 +2,17 @@ var stage = setStage();
 var params = initialize();
 
 //Initialise methods
+function setStage() {
+  var stage = new Konva.Stage({
+    container: "canvas-container",
+    width: 500,
+    height: 500,
+    id: "canvas"
+  });
+
+  return stage;
+}
+
 function initialize() {
   var params = setParams();
 
@@ -26,17 +37,6 @@ function setParams() {
   return params;
 }
 
-function setStage() {
-  var stage = new Konva.Stage({
-    container: "canvas-container",
-    width: 500,
-    height: 500,
-    id: "canvas"
-  });
-
-  return stage;
-}
-
 function addBackground(params) {
   var width = stage.width();
   var height = stage.height();
@@ -47,8 +47,7 @@ function addBackground(params) {
     width: width,
     height: height,
     fill: "white",
-    id: "background",
-
+    id: "background"
   });
 
   backgroundLayer.add(background);
@@ -62,12 +61,11 @@ function addMainLayer() {
   stage.add(mainLayer);
 }
 
-
 function setToolBar() {
   var toolBar = Array.from(document.getElementById("buttons").children);
 
-  toolBar.forEach(function (element) {
-    element.addEventListener("click", function () {
+  toolBar.forEach(function(element) {
+    element.addEventListener("click", function() {
       params.selected = "none";
       setCurrentTool(element);
     });
@@ -77,14 +75,16 @@ function setToolBar() {
 }
 
 function setZIndexBar() {
-  var zIndexBar = Array.from(document.getElementById("zindex-buttons").children);
+  var zIndexBar = Array.from(
+    document.getElementById("zindex-buttons").children
+  );
 
-  zIndexBar.forEach(function (element) {
-    element.addEventListener("click", function () {
+  zIndexBar.forEach(function(element) {
+    element.addEventListener("click", function() {
       if (params.selected !== "none") {
         moveElement(element);
       }
-    })
+    });
   });
 }
 
@@ -92,39 +92,43 @@ function setColorPalette() {
   var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
   var colorPalette = document.getElementById("color-palette");
 
-  colorArray.forEach(function (color) {
+  colorArray.forEach(function(color) {
     var colorButton = createColorButton(color);
 
-    colorButton.addEventListener("click", function () {
+    colorButton.addEventListener("click", function() {
       setCurrentColor(colorButton);
     });
 
     colorPalette.appendChild(colorButton);
-  })
+  });
 
-  var defaultColor = document.getElementById("red");
+  setDefaultColor(colorArray[0]);
+}
+
+function setDefaultColor(color) {
+  var defaultColor = document.getElementById(color);
 
   defaultColor.classList.add("color-btn-selected");
 }
 
 function createColorButton(color) {
   var colorButton = document.createElement("div");
+
   colorButton.id = color;
   colorButton.classList.add("color-btn");
   colorButton.style.backgroundColor = color;
 
   return colorButton;
-
 }
 
 // event handlers
-stage.on("mousedown touchstart", function () {
+stage.on("mousedown touchstart", function() {
   getStartPosition();
   params.selectGroup = [];
   params.isMouseDragging = true;
 });
 
-stage.on("mousemove touchmove", function (event) {
+stage.on("mousemove touchmove", function(event) {
   if (params.isMouseDragging) {
     setDragSize();
     removePrevious();
@@ -132,14 +136,12 @@ stage.on("mousemove touchmove", function (event) {
   }
 });
 
-stage.on("mouseup touchend", function (event) {
+stage.on("mouseup touchend", function(event) {
   params.isMouseDragging = false;
 
   if (params.currentTool === "select" || params.currentTool === "delete") {
-    getSelectionArea();
     useTool(event);
     removePrevious();
-    highlightSelected(params.selectGroup);
   }
 
   params.shapeInfo = {};
@@ -155,7 +157,6 @@ function setDragSize() {
 
   params.shapeInfo.height = calculateDragHeight(startPosition);
   params.shapeInfo.width = calculateDragWidth(startPosition);
-
 }
 
 function calculateDragWidth(startPosition) {
@@ -169,8 +170,10 @@ function calculateDragHeight(startPosition) {
 // Toolbar methods
 function setCurrentTool(element) {
   var toolBar = setToolBar();
+
   params.currentTool = element.id;
-  toolBar.forEach(function (tool) {
+
+  toolBar.forEach(function(tool) {
     if (tool === element) {
       tool.classList.add("btn-selected");
     } else {
@@ -203,6 +206,7 @@ function useTool(event) {
   }
   //defaultTool();
 }
+
 //Select methods
 function selectElement(event) {
   var element = event.target;
@@ -212,11 +216,11 @@ function selectElement(event) {
 
   if (params.isMouseDragging === true) {
     groupSelect(element, background);
-
   } else {
     singleSelect(element, background);
   }
 
+  highlightSelected(params.selectGroup);
 }
 
 function singleSelect(element, background) {
@@ -230,28 +234,33 @@ function singleSelect(element, background) {
 
 function groupSelect(element, background) {
   drawShape();
+  selectMultiple();
 }
 
-function getSelectionArea() {
+function setSearchArea() {
   var startPos = params.shapeInfo.startPosition;
   var endPos = stage.getPointerPosition();
+
+  var searchArea = {
+    start: {
+      x: Math.min(Math.floor(startPos.x), Math.ceil(endPos.x)),
+      y: Math.min(Math.floor(startPos.y), Math.ceil(endPos.y))
+    },
+    end: {
+      x: Math.max(Math.floor(startPos.x), Math.ceil(endPos.x)),
+      y: Math.max(Math.floor(startPos.y), Math.ceil(endPos.y))
+    }
+  };
+
+  return searchArea;
+}
+
+function selectMultiple() {
   var background = stage.findOne("#background");
-  var searchAreaStart = {};
-  var searchAreaEnd = {};
+  var searchArea = setSearchArea();
 
-  startPos.x = Math.floor(startPos.x);
-  startPos.y = Math.floor(startPos.y);
-
-  endPos.x = Math.ceil(endPos.x);
-  endPos.y = Math.ceil(endPos.y);
-
-  searchAreaStart.x = Math.min(startPos.x, endPos.x);
-  searchAreaStart.y = Math.min(startPos.y, endPos.y);
-  searchAreaEnd.x = Math.max(startPos.x, endPos.x);
-  searchAreaEnd.y = Math.max(startPos.y, endPos.y);
-
-  for (var x = searchAreaStart.x; x <= searchAreaEnd.x; x += 5) {
-    for (var y = searchAreaStart.y; y <= searchAreaEnd.y; y += 5) {
+  for (var x = searchArea.start.x; x <= searchArea.end.x; x += 5) {
+    for (var y = searchArea.start.y; y <= searchArea.end.y; y += 5) {
       var shape = stage.getIntersection({
         x: x,
         y: y
@@ -265,11 +274,10 @@ function getSelectionArea() {
 }
 
 function removeHighlightBox() {
-
   var highlightBoxes = stage.find(".highlightBox");
   var mainLayer = stage.findOne("#mainLayer");
 
-  highlightBoxes.forEach(function (box) {
+  highlightBoxes.forEach(function(box) {
     box.destroy();
   });
 
@@ -279,7 +287,7 @@ function removeHighlightBox() {
 function highlightSelected(arr) {
   var mainLayer = stage.findOne("#mainLayer");
 
-  arr.forEach(function (element) {
+  arr.forEach(function(element) {
     var selected = element;
     var selectRect = selected.getSelfRect();
 
@@ -296,28 +304,34 @@ function highlightSelected(arr) {
       strokeWidth: 2,
       dash: [5, 5],
       name: "highlightBox",
-      listening: false,
+      listening: false
     });
     mainLayer.add(rect);
   });
   mainLayer.draw();
 }
+
 //Delete methods
 function deleteElement(event) {
   var element = event.target;
   var background = stage.findOne("#background");
+  var layer = element.getLayer();
+
   if (element != background) {
     element.destroy();
-    stage.draw();
+    removeHighlightBox();
   }
 }
 
 function removePrevious() {
   var shapeInfo = params.shapeInfo;
+
   if (shapeInfo.previousShape) {
     var prev = shapeInfo.previousShape;
+    var layer = prev.getLayer();
+
     prev.destroy();
-    stage.draw();
+    layer.draw();
   }
 }
 //Shape methods
@@ -336,12 +350,7 @@ function drawShape() {
       shape = drawCircle(shapeInfo);
       break;
     case "select":
-      shape = drawRect(shapeInfo);
-      shape.fill(null);
-      shape.dash([10, 5]);
-      shape.strokeWidth(2);
-      shape.id("selectBox");
-      shape.listening(false);
+      shape = drawSelectBox(shapeInfo);
       break;
   }
 
@@ -351,6 +360,16 @@ function drawShape() {
   shapeInfo.previousShape = shape;
 
   mainLayer.draw();
+}
+function drawSelectBox(shapeInfo) {
+  var shape = drawRect(shapeInfo);
+
+  shape.fill(null);
+  shape.dash([10, 5]);
+  shape.strokeWidth(2);
+  shape.id("selectBox");
+  shape.listening(false);
+  return shape;
 }
 
 function drawRect(shapeInfo) {
@@ -388,15 +407,18 @@ function drawCircle(shapeInfo) {
 
 //Color methods
 function getColorPalette() {
-  var colorPalette = Array.from(document.getElementById("color-palette").children);
+  var colorPalette = Array.from(
+    document.getElementById("color-palette").children
+  );
   return colorPalette;
 }
 
 function setCurrentColor(element) {
   var colorPalette = getColorPalette();
+  var layer = stage.findOne("#mainLayer");
 
   params.currentColor = element.id;
-  colorPalette.forEach(function (color) {
+  colorPalette.forEach(function(color) {
     if (color === element) {
       color.classList.add("color-btn-selected");
     } else {
@@ -406,12 +428,14 @@ function setCurrentColor(element) {
 
   if (params.selected !== "none") {
     params.selected.fill(params.currentColor);
-    stage.draw();
+    layer.draw();
   }
 }
 //Zindex methods
 
 function moveElement(element) {
+  var layer = element.getLayer();
+
   switch (element.id) {
     case "move-to-back":
       params.selected.moveToBottom();
@@ -426,12 +450,12 @@ function moveElement(element) {
       params.selected.moveToTop();
       break;
   }
-  stage.draw();
+  layer.draw();
 }
 
 //helper methods
 function toggleDraggable(element) {
-  element.addEventListener("mouseenter", function () {
+  element.addEventListener("mouseenter", function() {
     if (params.currentTool !== "select") {
       this.draggable(false);
     } else {
