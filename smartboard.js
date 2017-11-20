@@ -81,7 +81,8 @@ function addBackground(params) {
     width: width,
     height: height,
     fill: "white",
-    id: "background"
+    id: "background",
+
   });
 
   backgroundLayer.add(background);
@@ -111,17 +112,41 @@ stage.on("mousemove touchmove", function (event) {
 });
 
 stage.on("mouseup touchend", function (event) {
-  
- 
+
+
   params.isMouseDragging = false;
   if (params.currentTool === "select" || params.currentTool === "delete") {
+    getSelectionArea();
     useTool(event);
     removePrevious();
   }
 
-  params.selectGroup = [];
+  console.log(params.selectGroup);
   params.shapeInfo = {};
 });
+
+function getSelectionArea(){
+  var startPos = params.shapeInfo.startPosition;
+  var endPos = stage.getPointerPosition();
+  var background = stage.findOne("#background");
+
+  startPos.x = Math.floor(startPos.x);
+  startPos.y = Math.floor(startPos.y);
+
+  endPos.x = Math.ceil(endPos.x);
+  endPos.y = Math.ceil(endPos.y);
+
+  for(var x = startPos.x; x <= endPos.x; x+= 5){
+    for(var y = startPos.y; y <= endPos.y; y+= 5){
+      var shape = stage.getIntersection({x: x, y: y});
+
+      if(shape !== background && !params.selectGroup.includes(shape)){
+        params.selectGroup.push(shape);
+      }
+
+    }
+  }
+}
 
 //event helpers
 function getStartPosition() {
@@ -150,7 +175,7 @@ function removePrevious() {
   var shapeInfo = params.shapeInfo;
 
   if (shapeInfo.previousShape) {
-    
+
     var prev = shapeInfo.previousShape;
     prev.destroy();
     stage.draw();
@@ -201,81 +226,78 @@ function selectElement(event) {
   var background = stage.findOne("#background");
 
   removePreviousHighlightBox();
+
   if (params.isMouseDragging === true) {
-    groupSelect(element,background);
+    groupSelect(element, background);
 
   } else {
-    singleSelect(element,background);
-     }
-
-}
-
-function singleSelect(element,background){
-  
-  
-  if (element === background || element === stage) {
-    params.selected = "none";
-  
-  } else {
-    params.selected = element;
-    
-    if(element.id() !== "selectBox" && element.id() !== "highlightBox"){
-
-    
-    highlightSelected();
-    }
-  
+    singleSelect(element, background);
   }
 
 }
 
-function groupSelect(element,background){
-  drawShape();
-  
-      if (!params.selectGroup.includes(element) && element !== background) {
-        params.selectGroup.push(element);
-      }
+function singleSelect(element, background) {
+
+
+  if (element === background || element === stage) {
+    params.selected = "none";
+
+  } else {
+    params.selected = element;
+
+    highlightSelected();
+
+  }
+
 }
 
-function removePreviousHighlightBox(){
+function groupSelect(element, background) { 
+    drawShape();
+  
+}
+
+
+
+function removePreviousHighlightBox() {
 
   var previousHighlightBox = stage.find("#highlightBox");
   var mainLayer = stage.findOne("#mainLayer");
 
-  if (previousHighlightBox){
-  previousHighlightBox.destroy();
-  mainLayer.draw();
+  if (previousHighlightBox) {
+    previousHighlightBox.destroy();
+    mainLayer.draw();
   }
 
 }
 
-function highlightSelected(){
+function highlightSelected() {
 
-    var selected = params.selected;
-    var selectRect = selected.getSelfRect();
-    
-    var x = selected.getAttr("x") + selectRect.x - 10;
-    var y = selected.getAttr("y") + selectRect.y - 10;
+  var selected = params.selected;
+  var selectRect = selected.getSelfRect();
 
-    
-    var rect = new Konva.Rect({
-      x: x,
-      y: y,
-      width: selectRect.width + 20,
-      height: selectRect.height+ 20,
-      fill: null,
-      stroke: "black",
-      strokeWidth: 2,
-      dash: [5,5],
-      name: "rect",
-      id: "highlightBox"
-    });
-  
-    var mainLayer = stage.findOne("#mainLayer");
+  var x = selected.getAttr("x") + selectRect.x - 10;
+  var y = selected.getAttr("y") + selectRect.y - 10;
 
-    mainLayer.add(rect);
-    mainLayer.draw();
-    
+
+  var rect = new Konva.Rect({
+    x: x,
+    y: y,
+    width: selectRect.width + 20,
+    height: selectRect.height + 20,
+    fill: null,
+    stroke: "black",
+    strokeWidth: 2,
+    dash: [5, 5],
+    name: "rect",
+    id: "highlightBox",
+    listening: false,
+  });
+
+  var mainLayer = stage.findOne("#mainLayer");
+
+  mainLayer.add(rect);
+  mainLayer.draw();
+
 }
 
 function deleteElement(event) {
@@ -306,9 +328,11 @@ function drawShape() {
     case "select":
       shape = drawRect(shapeInfo);
       shape.fill(null);
-      shape.dash([10,5]);
+      shape.dash([10, 5]);
       shape.strokeWidth(2);
       shape.id("selectBox");
+      shape.listening(false);
+      
       break;
   }
 
@@ -422,10 +446,11 @@ function setCurrentColor(element) {
 }
 
 function toggleDraggable(element) {
-  element.addEventListener("mousedown", function () {
+  element.addEventListener("mouseenter", function () {
     if (params.currentTool !== "select") {
       this.draggable(false);
-    } else {
+    } 
+    else {
       this.draggable(true);
     }
   });
