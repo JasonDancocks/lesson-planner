@@ -100,6 +100,7 @@ function addMainLayer() {
 
 stage.on("mousedown touchstart", function () {
   getStartPosition();
+  params.selectGroup =[];
   params.isMouseDragging = true;
 });
 
@@ -119,28 +120,43 @@ stage.on("mouseup touchend", function (event) {
     getSelectionArea();
     useTool(event);
     removePrevious();
+    highlightSelected(params.selectGroup);
+
   }
 
-  console.log(params.selectGroup);
+  
   params.shapeInfo = {};
 });
 
-function getSelectionArea(){
+
+function getSelectionArea() {
   var startPos = params.shapeInfo.startPosition;
   var endPos = stage.getPointerPosition();
   var background = stage.findOne("#background");
-
+  var searchAreaStart= {};
+  var searchAreaEnd = {};
+   
   startPos.x = Math.floor(startPos.x);
   startPos.y = Math.floor(startPos.y);
 
   endPos.x = Math.ceil(endPos.x);
   endPos.y = Math.ceil(endPos.y);
 
-  for(var x = startPos.x; x <= endPos.x; x+= 5){
-    for(var y = startPos.y; y <= endPos.y; y+= 5){
-      var shape = stage.getIntersection({x: x, y: y});
+  searchAreaStart.x = Math.min(startPos.x,endPos.x);
+  searchAreaStart.y = Math.min(startPos.y, endPos.y);
+  searchAreaEnd.x = Math.max(startPos.x, endPos.x);
+  searchAreaEnd.y = Math.max(startPos.y,endPos.y);
+  
+  
+  
+  for (var x = searchAreaStart.x; x <= searchAreaEnd.x; x += 5) {
+    for (var y = searchAreaStart.y; y <= searchAreaEnd.y; y += 5) {
+      var shape = stage.getIntersection({
+        x: x,
+        y: y
+      });
 
-      if(shape !== background && !params.selectGroup.includes(shape)){
+      if (shape !== background && !params.selectGroup.includes(shape)) {
         params.selectGroup.push(shape);
       }
 
@@ -225,7 +241,7 @@ function selectElement(event) {
   var element = event.target;
   var background = stage.findOne("#background");
 
-  removePreviousHighlightBox();
+  removeHighlightBox();
 
   if (params.isMouseDragging === true) {
     groupSelect(element, background);
@@ -241,61 +257,70 @@ function singleSelect(element, background) {
 
   if (element === background || element === stage) {
     params.selected = "none";
+    
 
   } else {
     params.selected = element;
 
-    highlightSelected();
+    highlightSelected([element]);
 
   }
 
 }
 
-function groupSelect(element, background) { 
-    drawShape();
-  
+function groupSelect(element, background) {
+  drawShape();
+
 }
 
 
 
-function removePreviousHighlightBox() {
+function removeHighlightBox() {
 
-  var previousHighlightBox = stage.find("#highlightBox");
+  var highlightBoxes = stage.find(".highlightBox");
+  
   var mainLayer = stage.findOne("#mainLayer");
 
-  if (previousHighlightBox) {
-    previousHighlightBox.destroy();
-    mainLayer.draw();
-  }
+  highlightBoxes.forEach(function (box) {
 
-}
-
-function highlightSelected() {
-
-  var selected = params.selected;
-  var selectRect = selected.getSelfRect();
-
-  var x = selected.getAttr("x") + selectRect.x - 10;
-  var y = selected.getAttr("y") + selectRect.y - 10;
-
-
-  var rect = new Konva.Rect({
-    x: x,
-    y: y,
-    width: selectRect.width + 20,
-    height: selectRect.height + 20,
-    fill: null,
-    stroke: "black",
-    strokeWidth: 2,
-    dash: [5, 5],
-    name: "rect",
-    id: "highlightBox",
-    listening: false,
+   box.destroy();
   });
 
+  mainLayer.draw();
+
+}
+
+function highlightSelected(arr) {
   var mainLayer = stage.findOne("#mainLayer");
 
-  mainLayer.add(rect);
+  arr.forEach(function (element) {
+
+
+    var selected = element;
+    var selectRect = selected.getSelfRect();
+
+    var x = selected.getAttr("x") + selectRect.x - 10;
+    var y = selected.getAttr("y") + selectRect.y - 10;
+
+
+    var rect = new Konva.Rect({
+      x: x,
+      y: y,
+      width: selectRect.width + 20,
+      height: selectRect.height + 20,
+      fill: null,
+      stroke: "black",
+      strokeWidth: 2,
+      dash: [5, 5],
+      name: "highlightBox",
+      
+      listening: false,
+    });
+
+
+
+    mainLayer.add(rect);
+  });
   mainLayer.draw();
 
 }
@@ -332,7 +357,7 @@ function drawShape() {
       shape.strokeWidth(2);
       shape.id("selectBox");
       shape.listening(false);
-      
+
       break;
   }
 
@@ -449,8 +474,7 @@ function toggleDraggable(element) {
   element.addEventListener("mouseenter", function () {
     if (params.currentTool !== "select") {
       this.draggable(false);
-    } 
-    else {
+    } else {
       this.draggable(true);
     }
   });
