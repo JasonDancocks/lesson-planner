@@ -1,13 +1,6 @@
 var stage = setStage();
 var params = initialize();
 
-
-//testing
-
-//next steps
-
-// refactor
-
 //Initialise methods
 function initialize() {
   var params = setParams();
@@ -28,36 +21,9 @@ function setParams() {
   params.currentTool = "select";
   params.selected = "none";
   params.currentColor = "red";
-
-  //test
   params.selectGroup = [];
 
   return params;
-}
-
-function setToolBar() {
-  var toolBar = Array.from(document.getElementById("buttons").children);
-
-  toolBar.forEach(function (element) {
-    element.addEventListener("click", function () {
-      params.selected = "none";
-      setCurrentTool(element);
-    });
-  });
-
-  return toolBar;
-}
-
-function setZIndexBar() {
-  var zIndexBar = Array.from(document.getElementById("zindex-buttons").children);
-
-  zIndexBar.forEach(function (element) {
-    element.addEventListener("click", function () {
-      if (params.selected !== "none") {
-        moveElement(element);
-      }
-    })
-  });
 }
 
 function setStage() {
@@ -96,11 +62,65 @@ function addMainLayer() {
   stage.add(mainLayer);
 }
 
-// event handlers
 
+function setToolBar() {
+  var toolBar = Array.from(document.getElementById("buttons").children);
+
+  toolBar.forEach(function (element) {
+    element.addEventListener("click", function () {
+      params.selected = "none";
+      setCurrentTool(element);
+    });
+  });
+
+  return toolBar;
+}
+
+function setZIndexBar() {
+  var zIndexBar = Array.from(document.getElementById("zindex-buttons").children);
+
+  zIndexBar.forEach(function (element) {
+    element.addEventListener("click", function () {
+      if (params.selected !== "none") {
+        moveElement(element);
+      }
+    })
+  });
+}
+
+function setColorPalette() {
+  var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
+  var colorPalette = document.getElementById("color-palette");
+
+  colorArray.forEach(function (color) {
+    var colorButton = createColorButton(color);
+
+    colorButton.addEventListener("click", function () {
+      setCurrentColor(colorButton);
+    });
+
+    colorPalette.appendChild(colorButton);
+  })
+
+  var defaultColor = document.getElementById("red");
+
+  defaultColor.classList.add("color-btn-selected");
+}
+
+function createColorButton(color) {
+  var colorButton = document.createElement("div");
+  colorButton.id = color;
+  colorButton.classList.add("color-btn");
+  colorButton.style.backgroundColor = color;
+
+  return colorButton;
+
+}
+
+// event handlers
 stage.on("mousedown touchstart", function () {
   getStartPosition();
-  params.selectGroup =[];
+  params.selectGroup = [];
   params.isMouseDragging = true;
 });
 
@@ -113,56 +133,17 @@ stage.on("mousemove touchmove", function (event) {
 });
 
 stage.on("mouseup touchend", function (event) {
-
-
   params.isMouseDragging = false;
+
   if (params.currentTool === "select" || params.currentTool === "delete") {
     getSelectionArea();
     useTool(event);
     removePrevious();
     highlightSelected(params.selectGroup);
-
   }
 
-  
   params.shapeInfo = {};
 });
-
-
-function getSelectionArea() {
-  var startPos = params.shapeInfo.startPosition;
-  var endPos = stage.getPointerPosition();
-  var background = stage.findOne("#background");
-  var searchAreaStart= {};
-  var searchAreaEnd = {};
-   
-  startPos.x = Math.floor(startPos.x);
-  startPos.y = Math.floor(startPos.y);
-
-  endPos.x = Math.ceil(endPos.x);
-  endPos.y = Math.ceil(endPos.y);
-
-  searchAreaStart.x = Math.min(startPos.x,endPos.x);
-  searchAreaStart.y = Math.min(startPos.y, endPos.y);
-  searchAreaEnd.x = Math.max(startPos.x, endPos.x);
-  searchAreaEnd.y = Math.max(startPos.y,endPos.y);
-  
-  
-  
-  for (var x = searchAreaStart.x; x <= searchAreaEnd.x; x += 5) {
-    for (var y = searchAreaStart.y; y <= searchAreaEnd.y; y += 5) {
-      var shape = stage.getIntersection({
-        x: x,
-        y: y
-      });
-
-      if (shape !== background && !params.selectGroup.includes(shape)) {
-        params.selectGroup.push(shape);
-      }
-
-    }
-  }
-}
 
 //event helpers
 function getStartPosition() {
@@ -178,7 +159,6 @@ function setDragSize() {
 }
 
 function calculateDragWidth(startPosition) {
-
   return stage.getPointerPosition().x - startPosition.x;
 }
 
@@ -186,19 +166,7 @@ function calculateDragHeight(startPosition) {
   return stage.getPointerPosition().y - startPosition.y;
 }
 
-function removePrevious() {
-
-  var shapeInfo = params.shapeInfo;
-
-  if (shapeInfo.previousShape) {
-
-    var prev = shapeInfo.previousShape;
-    prev.destroy();
-    stage.draw();
-  }
-}
-
-//toolbar
+// Toolbar methods
 function setCurrentTool(element) {
   var toolBar = setToolBar();
   params.currentTool = element.id;
@@ -235,8 +203,7 @@ function useTool(event) {
   }
   //defaultTool();
 }
-
-// tools methods
+//Select methods
 function selectElement(event) {
   var element = event.target;
   var background = stage.findOne("#background");
@@ -253,55 +220,71 @@ function selectElement(event) {
 }
 
 function singleSelect(element, background) {
-
-
   if (element === background || element === stage) {
     params.selected = "none";
-    
-
   } else {
     params.selected = element;
-
     highlightSelected([element]);
-
   }
-
 }
 
 function groupSelect(element, background) {
   drawShape();
-
 }
 
+function getSelectionArea() {
+  var startPos = params.shapeInfo.startPosition;
+  var endPos = stage.getPointerPosition();
+  var background = stage.findOne("#background");
+  var searchAreaStart = {};
+  var searchAreaEnd = {};
 
+  startPos.x = Math.floor(startPos.x);
+  startPos.y = Math.floor(startPos.y);
+
+  endPos.x = Math.ceil(endPos.x);
+  endPos.y = Math.ceil(endPos.y);
+
+  searchAreaStart.x = Math.min(startPos.x, endPos.x);
+  searchAreaStart.y = Math.min(startPos.y, endPos.y);
+  searchAreaEnd.x = Math.max(startPos.x, endPos.x);
+  searchAreaEnd.y = Math.max(startPos.y, endPos.y);
+
+  for (var x = searchAreaStart.x; x <= searchAreaEnd.x; x += 5) {
+    for (var y = searchAreaStart.y; y <= searchAreaEnd.y; y += 5) {
+      var shape = stage.getIntersection({
+        x: x,
+        y: y
+      });
+
+      if (shape !== background && !params.selectGroup.includes(shape)) {
+        params.selectGroup.push(shape);
+      }
+    }
+  }
+}
 
 function removeHighlightBox() {
 
   var highlightBoxes = stage.find(".highlightBox");
-  
   var mainLayer = stage.findOne("#mainLayer");
 
   highlightBoxes.forEach(function (box) {
-
-   box.destroy();
+    box.destroy();
   });
 
   mainLayer.draw();
-
 }
 
 function highlightSelected(arr) {
   var mainLayer = stage.findOne("#mainLayer");
 
   arr.forEach(function (element) {
-
-
     var selected = element;
     var selectRect = selected.getSelfRect();
 
     var x = selected.getAttr("x") + selectRect.x - 10;
     var y = selected.getAttr("y") + selectRect.y - 10;
-
 
     var rect = new Konva.Rect({
       x: x,
@@ -313,29 +296,31 @@ function highlightSelected(arr) {
       strokeWidth: 2,
       dash: [5, 5],
       name: "highlightBox",
-      
       listening: false,
     });
-
-
-
     mainLayer.add(rect);
   });
   mainLayer.draw();
-
 }
-
+//Delete methods
 function deleteElement(event) {
-
   var element = event.target;
   var background = stage.findOne("#background");
   if (element != background) {
-
     element.destroy();
     stage.draw();
   }
 }
 
+function removePrevious() {
+  var shapeInfo = params.shapeInfo;
+  if (shapeInfo.previousShape) {
+    var prev = shapeInfo.previousShape;
+    prev.destroy();
+    stage.draw();
+  }
+}
+//Shape methods
 function drawShape() {
   var mainLayer = stage.findOne("#mainLayer");
   var shapeInfo = params.shapeInfo;
@@ -357,7 +342,6 @@ function drawShape() {
       shape.strokeWidth(2);
       shape.id("selectBox");
       shape.listening(false);
-
       break;
   }
 
@@ -370,7 +354,6 @@ function drawShape() {
 }
 
 function drawRect(shapeInfo) {
-
   var rect = new Konva.Rect({
     x: shapeInfo.startPosition.x,
     y: shapeInfo.startPosition.y,
@@ -403,50 +386,7 @@ function drawCircle(shapeInfo) {
   return circle;
 }
 
-// helper methods
-
-function getColor() {
-
-  var color = colorArray[Math.floor(Math.random() * colorArray.length)];
-  return color;
-}
-
-function logObject(object) {
-  console.log(JSON.stringify(object));
-}
-
-//color
-function createColorButton(color) {
-  var colorButton = document.createElement("div");
-  colorButton.id = color;
-  colorButton.classList.add("color-btn");
-  colorButton.style.backgroundColor = color;
-
-  return colorButton;
-
-}
-
-function setColorPalette() {
-  var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
-
-  var colorPalette = document.getElementById("color-palette");
-
-  colorArray.forEach(function (color) {
-
-    var colorButton = createColorButton(color);
-
-    colorButton.addEventListener("click", function () {
-      setCurrentColor(colorButton);
-
-    });
-    colorPalette.appendChild(colorButton);
-  })
-
-  var defaultColor = document.getElementById("red");
-
-  defaultColor.classList.add("color-btn-selected");
-}
-
+//Color methods
 function getColorPalette() {
   var colorPalette = Array.from(document.getElementById("color-palette").children);
   return colorPalette;
@@ -469,16 +409,7 @@ function setCurrentColor(element) {
     stage.draw();
   }
 }
-
-function toggleDraggable(element) {
-  element.addEventListener("mouseenter", function () {
-    if (params.currentTool !== "select") {
-      this.draggable(false);
-    } else {
-      this.draggable(true);
-    }
-  });
-}
+//Zindex methods
 
 function moveElement(element) {
   switch (element.id) {
@@ -498,4 +429,13 @@ function moveElement(element) {
   stage.draw();
 }
 
-//groups
+//helper methods
+function toggleDraggable(element) {
+  element.addEventListener("mouseenter", function () {
+    if (params.currentTool !== "select") {
+      this.draggable(false);
+    } else {
+      this.draggable(true);
+    }
+  });
+}
