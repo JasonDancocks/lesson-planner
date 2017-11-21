@@ -140,7 +140,6 @@ stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
   removePrevious();  
   useTool(event);
-
   params.shapeInfo = {};
 });
 
@@ -237,6 +236,7 @@ function singleSelect(element, background) {
 
 function selectMultiple(background) {
   var searchArea = setSearchArea();
+  var selection = [];
 
   for (var x = searchArea.start.x; x <= searchArea.end.x; x += 5) {
     for (var y = searchArea.start.y; y <= searchArea.end.y; y += 5) {
@@ -246,8 +246,9 @@ function selectMultiple(background) {
       });
 
       if (shape !== background && !params.selectGroup.includes(shape)) {
-        params.selectGroup.push(shape);
+        selection.push(shape);
       }
+      params.selectGroup = selection;
     }
   }
 }
@@ -334,7 +335,7 @@ function removePrevious() {
     var layer = prev.getLayer();
 
     prev.destroy();
-    layer.draw();
+    layer.batchDraw();
   }
 }
 //Shape methods
@@ -363,7 +364,7 @@ function drawShape() {
   mainLayer.add(shape);
   shapeInfo.previousShape = shape;
   
-  mainLayer.draw();
+  mainLayer.batchDraw();
 }
 
 function drawSelectBox(shapeInfo) {
