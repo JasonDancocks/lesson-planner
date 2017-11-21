@@ -30,7 +30,6 @@ function setParams() {
   params.shapeInfo = {};
   params.isMouseDragging = false;
   params.currentTool = "select";
-  params.selected = "none";
   params.currentColor = "red";
   params.selectGroup = [];
 
@@ -64,9 +63,9 @@ function addMainLayer() {
 function setToolBar() {
   var toolBar = Array.from(document.getElementById("buttons").children);
 
-  toolBar.forEach(function(element) {
-    element.addEventListener("click", function() {
-      params.selected = "none";
+  toolBar.forEach(function (element) {
+    element.addEventListener("click", function () {
+      params.selectGroup = [];
       setCurrentTool(element);
     });
   });
@@ -79,10 +78,10 @@ function setZIndexBar() {
     document.getElementById("zindex-buttons").children
   );
 
-  zIndexBar.forEach(function(element) {
-    element.addEventListener("click", function() {
-      if (params.selected !== "none") {
-        moveElement(element);
+  zIndexBar.forEach(function (element) {
+    element.addEventListener("click", function (event) {
+      if (params.selectGroup.length > 0) {
+        moveElement(element,event);
       }
     });
   });
@@ -92,10 +91,10 @@ function setColorPalette() {
   var colorArray = ["red", "orange", "green", "blue", "yellow", "pink"];
   var colorPalette = document.getElementById("color-palette");
 
-  colorArray.forEach(function(color) {
+  colorArray.forEach(function (color) {
     var colorButton = createColorButton(color);
 
-    colorButton.addEventListener("click", function() {
+    colorButton.addEventListener("click", function () {
       setCurrentColor(colorButton);
     });
 
@@ -122,13 +121,13 @@ function createColorButton(color) {
 }
 
 // event handlers
-stage.on("mousedown touchstart", function() {
+stage.on("mousedown touchstart", function () {
   getStartPosition();
   params.selectGroup = [];
   params.isMouseDragging = true;
 });
 
-stage.on("mousemove touchmove", function(event) {
+stage.on("mousemove touchmove", function (event) {
   if (params.isMouseDragging) {
     setDragSize();
     removePrevious();
@@ -136,16 +135,23 @@ stage.on("mousemove touchmove", function(event) {
   }
 });
 
-stage.on("mouseup touchend", function(event) {
+stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
 
-  if (params.currentTool === "select" || params.currentTool === "delete") {
-    useTool(event);
-    removePrevious();
+  if(params.currentTool === "select" || params.currentTool === "delete"){
+  removePrevious();
+  useTool(event);
   }
 
   params.shapeInfo = {};
+  console.log(params.selectGroup);
 });
+
+stage.on("dragstart", function(){
+  removeHighlightBox();
+});
+
+
 
 //event helpers
 function getStartPosition() {
@@ -173,7 +179,7 @@ function setCurrentTool(element) {
 
   params.currentTool = element.id;
 
-  toolBar.forEach(function(tool) {
+  toolBar.forEach(function (tool) {
     if (tool === element) {
       tool.classList.add("btn-selected");
     } else {
@@ -214,8 +220,11 @@ function selectElement(event) {
 
   removeHighlightBox();
 
-  if (params.isMouseDragging === true) {
-    groupSelect(element, background);
+  if (event.type === "mousemove" || event.type === "mouseup") {
+    if(event.type === "mousemove"){
+      drawShape();
+    }
+    selectMultiple();
   } else {
     singleSelect(element, background);
   }
@@ -225,16 +234,14 @@ function selectElement(event) {
 
 function singleSelect(element, background) {
   if (element === background || element === stage) {
-    params.selected = "none";
+    params.selectGroup = [];
   } else {
-    params.selected = element;
-    highlightSelected([element]);
+    params.selectGroup.push(element);
   }
 }
 
-function groupSelect(element, background) {
-  drawShape();
-  selectMultiple();
+function groupSelect() {
+ 
 }
 
 function setSearchArea() {
@@ -277,7 +284,7 @@ function removeHighlightBox() {
   var highlightBoxes = stage.find(".highlightBox");
   var mainLayer = stage.findOne("#mainLayer");
 
-  highlightBoxes.forEach(function(box) {
+  highlightBoxes.forEach(function (box) {
     box.destroy();
   });
 
@@ -287,7 +294,7 @@ function removeHighlightBox() {
 function highlightSelected(arr) {
   var mainLayer = stage.findOne("#mainLayer");
 
-  arr.forEach(function(element) {
+  arr.forEach(function (element) {
     var selected = element;
     var selectRect = selected.getSelfRect();
 
@@ -361,6 +368,7 @@ function drawShape() {
 
   mainLayer.draw();
 }
+
 function drawSelectBox(shapeInfo) {
   var shape = drawRect(shapeInfo);
 
@@ -418,7 +426,7 @@ function setCurrentColor(element) {
   var layer = stage.findOne("#mainLayer");
 
   params.currentColor = element.id;
-  colorPalette.forEach(function(color) {
+  colorPalette.forEach(function (color) {
     if (color === element) {
       color.classList.add("color-btn-selected");
     } else {
@@ -426,28 +434,40 @@ function setCurrentColor(element) {
     }
   });
 
-  if (params.selected !== "none") {
-    params.selected.fill(params.currentColor);
+  if (params.selectGroup.length > 0) {
+
+    params.selectGroup.forEach(function (element) {
+      fill(params.currentColor);
+    });
+
     layer.draw();
   }
 }
 //Zindex methods
 
-function moveElement(element) {
-  var layer = element.getLayer();
+function moveElement(element,event) {
+  var layer = stage.findOne("#mainLayer");
 
   switch (element.id) {
     case "move-to-back":
-      params.selected.moveToBottom();
+      params.selectGroup.forEach(function (element) {
+        element.moveToBottom();
+      });
       break;
     case "move-backward":
-      params.selected.moveDown();
+      params.selectGroup.forEach(function (element) {
+        element.moveDown();
+      });
       break;
     case "move-forward":
-      params.selected.moveUp();
+      params.selectGroup.forEach(function (element) {
+        element.moveUp();
+      });
       break;
     case "move-to-front":
-      params.selected.moveToTop();
+      params.selectGroup.forEach(function (element) {
+        element.moveToTop();
+      });
       break;
   }
   layer.draw();
@@ -455,7 +475,7 @@ function moveElement(element) {
 
 //helper methods
 function toggleDraggable(element) {
-  element.addEventListener("mouseenter", function() {
+  element.addEventListener("mouseenter", function () {
     if (params.currentTool !== "select") {
       this.draggable(false);
     } else {
