@@ -81,7 +81,7 @@ function setZIndexBar() {
   zIndexBar.forEach(function (element) {
     element.addEventListener("click", function (event) {
       if (params.selectGroup.length > 0) {
-        moveElement(element,event);
+        moveElement(element, event);
       }
     });
   });
@@ -96,6 +96,7 @@ function setColorPalette() {
 
     colorButton.addEventListener("click", function () {
       setCurrentColor(colorButton);
+      changeColor();
     });
 
     colorPalette.appendChild(colorButton);
@@ -123,7 +124,7 @@ function createColorButton(color) {
 // event handlers
 stage.on("mousedown touchstart", function () {
   getStartPosition();
-  params.selectGroup = [];
+  clearSelectGroup();
   params.isMouseDragging = true;
 });
 
@@ -137,20 +138,15 @@ stage.on("mousemove touchmove", function (event) {
 
 stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
-
-  if(params.currentTool === "select" || params.currentTool === "delete"){
-  removePrevious();
+  removePrevious();  
   useTool(event);
-  }
 
   params.shapeInfo = {};
-  console.log(params.selectGroup);
 });
 
-stage.on("dragstart", function(){
+stage.on("dragstart", function () {
   removeHighlightBox();
 });
-
 
 
 //event helpers
@@ -203,6 +199,7 @@ function useTool(event) {
       break;
     case "rect":
       drawShape();
+
       break;
     case "circle":
       drawShape();
@@ -220,28 +217,39 @@ function selectElement(event) {
 
   removeHighlightBox();
 
-  if (event.type === "mousemove" || event.type === "mouseup") {
-    if(event.type === "mousemove"){
+  if (params.isMouseDragging === true) {
+    if (event.type === "mousemove") {
       drawShape();
     }
-    selectMultiple();
+    selectMultiple(background);
   } else {
     singleSelect(element, background);
   }
 
-  highlightSelected(params.selectGroup);
+  highlightSelected();
 }
 
 function singleSelect(element, background) {
-  if (element === background || element === stage) {
-    params.selectGroup = [];
-  } else {
+  if (element !== background && element !== stage) {
     params.selectGroup.push(element);
   }
 }
 
-function groupSelect() {
- 
+function selectMultiple(background) {
+  var searchArea = setSearchArea();
+
+  for (var x = searchArea.start.x; x <= searchArea.end.x; x += 5) {
+    for (var y = searchArea.start.y; y <= searchArea.end.y; y += 5) {
+      var shape = stage.getIntersection({
+        x: x,
+        y: y
+      });
+
+      if (shape !== background && !params.selectGroup.includes(shape)) {
+        params.selectGroup.push(shape);
+      }
+    }
+  }
 }
 
 function setSearchArea() {
@@ -262,39 +270,10 @@ function setSearchArea() {
   return searchArea;
 }
 
-function selectMultiple() {
-  var background = stage.findOne("#background");
-  var searchArea = setSearchArea();
-
-  for (var x = searchArea.start.x; x <= searchArea.end.x; x += 5) {
-    for (var y = searchArea.start.y; y <= searchArea.end.y; y += 5) {
-      var shape = stage.getIntersection({
-        x: x,
-        y: y
-      });
-
-      if (shape !== background && !params.selectGroup.includes(shape)) {
-        params.selectGroup.push(shape);
-      }
-    }
-  }
-}
-
-function removeHighlightBox() {
-  var highlightBoxes = stage.find(".highlightBox");
+function highlightSelected() {
   var mainLayer = stage.findOne("#mainLayer");
 
-  highlightBoxes.forEach(function (box) {
-    box.destroy();
-  });
-
-  mainLayer.draw();
-}
-
-function highlightSelected(arr) {
-  var mainLayer = stage.findOne("#mainLayer");
-
-  arr.forEach(function (element) {
+  params.selectGroup.forEach(function (element) {
     var selected = element;
     var selectRect = selected.getSelfRect();
 
@@ -317,6 +296,23 @@ function highlightSelected(arr) {
   });
   mainLayer.draw();
 }
+
+function removeHighlightBox() {
+  var highlightBoxes = stage.find(".highlightBox");
+  var mainLayer = stage.findOne("#mainLayer");
+
+  highlightBoxes.forEach(function (box) {
+    box.destroy();
+  });
+
+  mainLayer.draw();
+}
+
+function clearSelectGroup() {
+  params.selectGroup = [];
+  highlightSelected();
+}
+
 
 //Delete methods
 function deleteElement(event) {
@@ -344,6 +340,7 @@ function removePrevious() {
 //Shape methods
 function drawShape() {
   var mainLayer = stage.findOne("#mainLayer");
+  var background = stage.findOne("#background");
   var shapeInfo = params.shapeInfo;
   var shape;
 
@@ -365,7 +362,7 @@ function drawShape() {
 
   mainLayer.add(shape);
   shapeInfo.previousShape = shape;
-
+  
   mainLayer.draw();
 }
 
@@ -421,9 +418,19 @@ function getColorPalette() {
   return colorPalette;
 }
 
+function changeColor() {
+    var layer = stage.findOne("#mainLayer");
+    
+    params.selectGroup.forEach(function (element) {
+      element.fill(params.currentColor);
+    });
+
+    layer.draw();
+  
+}
+
 function setCurrentColor(element) {
   var colorPalette = getColorPalette();
-  var layer = stage.findOne("#mainLayer");
 
   params.currentColor = element.id;
   colorPalette.forEach(function (color) {
@@ -433,19 +440,10 @@ function setCurrentColor(element) {
       color.classList.remove("color-btn-selected");
     }
   });
-
-  if (params.selectGroup.length > 0) {
-
-    params.selectGroup.forEach(function (element) {
-      fill(params.currentColor);
-    });
-
-    layer.draw();
-  }
 }
 //Zindex methods
 
-function moveElement(element,event) {
+function moveElement(element, event) {
   var layer = stage.findOne("#mainLayer");
 
   switch (element.id) {
