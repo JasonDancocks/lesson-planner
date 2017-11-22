@@ -65,7 +65,6 @@ function setToolBar() {
 
   toolBar.forEach(function (element) {
     element.addEventListener("click", function () {
-      params.selectGroup = [];
       setCurrentTool(element);
     });
   });
@@ -138,7 +137,7 @@ stage.on("mousemove touchmove", function (event) {
 
 stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
-  removePrevious();  
+  removePrevious();
   useTool(event);
   params.shapeInfo = {};
 });
@@ -205,6 +204,9 @@ function useTool(event) {
       break;
     default:
       break;
+  }
+  if (params.currentTool !== "select" && event.type === "mouseup") {
+    highlightSelected();
   }
   //defaultTool();
 }
@@ -363,8 +365,13 @@ function drawShape() {
 
   mainLayer.add(shape);
   shapeInfo.previousShape = shape;
-  
+
   mainLayer.batchDraw();
+
+  if (params.currentTool !== "select") {
+    params.selectGroup = [];
+    params.selectGroup.push(shape);
+  }
 }
 
 function drawSelectBox(shapeInfo) {
@@ -420,14 +427,14 @@ function getColorPalette() {
 }
 
 function changeColor() {
-    var layer = stage.findOne("#mainLayer");
-    
-    params.selectGroup.forEach(function (element) {
-      element.fill(params.currentColor);
-    });
+  var layer = stage.findOne("#mainLayer");
 
-    layer.draw();
-  
+  params.selectGroup.forEach(function (element) {
+    element.fill(params.currentColor);
+  });
+
+  layer.draw();
+
 }
 
 function setCurrentColor(element) {
