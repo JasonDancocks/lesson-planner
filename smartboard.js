@@ -21,6 +21,7 @@ function initialize() {
   setToolBar();
   setZIndexBar();
   setColorPalette();
+
   return params;
 }
 
@@ -29,7 +30,6 @@ function setParams() {
 
   params.shapeInfo = {};
   params.isMouseDragging = false;
-  params.currentTool = "select";
   params.currentColor = "red";
   params.selectGroup = [];
 
@@ -169,9 +169,7 @@ function calculateDragHeight(startPosition) {
 
 // Toolbar methods
 function setCurrentTool(element) {
-  var toolBar = setToolBar();
-
-  params.currentTool = element.id;
+  var toolBar = getToolBar();
 
   toolBar.forEach(function (tool) {
     if (tool === element) {
@@ -182,13 +180,28 @@ function setCurrentTool(element) {
   });
 }
 
-function defaultTool() {
-  var select = document.getElementById("select");
-  setCurrentTool(select);
+function getCurrentTool(){
+  var toolBar = getToolBar();
+
+  var currentTool = toolBar.find(function (toolButton) {
+    if(toolButton.classList.contains("btn-selected")){
+      return toolButton;
+    }
+  });
+   return currentTool.id;
+}
+
+function getToolBar(){
+  var toolBar = Array.from(
+    document.getElementById("buttons").children
+  );
+  return toolBar;
 }
 
 function useTool(event) {
-  switch (params.currentTool) {
+  var currentTool = getCurrentTool();
+
+  switch (currentTool) {
     case "select":
       selectElement(event);
       break;
@@ -202,10 +215,8 @@ function useTool(event) {
     case "circle":
       drawShape();
       break;
-    default:
-      break;
   }
-  if (params.currentTool !== "select" && event.type === "mouseup") {
+  if (currentTool !== "select" && event.type === "mouseup") {
     highlightSelected();
   }
   //defaultTool();
@@ -346,10 +357,11 @@ function drawShape() {
   var background = stage.findOne("#background");
   var shapeInfo = params.shapeInfo;
   var shape;
+  var currentTool = getCurrentTool();
 
   shapeInfo.color = params.currentColor;
 
-  switch (params.currentTool) {
+  switch (currentTool) {
     case "rect":
       shape = drawRect(shapeInfo);
       break;
@@ -368,7 +380,7 @@ function drawShape() {
 
   mainLayer.batchDraw();
 
-  if (params.currentTool !== "select") {
+  if ( currentTool !== "select") {
     params.selectGroup = [];
     params.selectGroup.push(shape);
   }
@@ -481,8 +493,9 @@ function moveElement(element, event) {
 
 //helper methods
 function toggleDraggable(element) {
+  var currentTool = getCurrentTool();
   element.addEventListener("mouseenter", function () {
-    if (params.currentTool !== "select") {
+    if (currentTool !== "select") {
       this.draggable(false);
     } else {
       this.draggable(true);
