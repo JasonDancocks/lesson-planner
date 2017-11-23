@@ -134,6 +134,7 @@ stage.on("mousemove touchmove", function (event) {
   }
 });
 
+
 stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
   removePrevious();
