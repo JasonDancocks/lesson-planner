@@ -16,8 +16,8 @@ function setStage() {
 function initialize() {
   var params = setParams();
 
-  addBackground(params);
-  addMainLayer(params);
+  addBackground();
+  addMainLayer();
   setToolBar();
   setZIndexBar();
   setColorPalette();
@@ -26,17 +26,15 @@ function initialize() {
 }
 
 function setParams() {
-  var params = {};
-
-  params.shapeInfo = {};
-  params.isMouseDragging = false;
-  params.currentColor = "red";
-  params.selectGroup = [];
-
+  var params = {
+    startPosition: {},
+    isMouseDragging: false,
+    selectGroup: [],
+  }
   return params;
 }
 
-function addBackground(params) {
+function addBackground() {
   var width = stage.width();
   var height = stage.height();
   var backgroundLayer = new Konva.Layer();
@@ -121,15 +119,16 @@ function createColorButton(color) {
 }
 
 // event handlers
-stage.on("mousedown touchstart", function () {
+stage.on("mousedown touchstart", function (event) {
   getStartPosition();
-  clearSelectGroup();
+  if (!event.evt.ctrlKey) {
+    clearSelectGroup();
+  }
   params.isMouseDragging = true;
 });
 
 stage.on("mousemove touchmove", function (event) {
   if (params.isMouseDragging) {
-    setDragSize();
     removePrevious();
     useTool(event);
   }
@@ -139,7 +138,7 @@ stage.on("mouseup touchend", function (event) {
   params.isMouseDragging = false;
   removePrevious();
   useTool(event);
-  params.shapeInfo = {};
+  params.previousShape = undefined;
 });
 
 stage.on("dragstart", function () {
@@ -149,14 +148,7 @@ stage.on("dragstart", function () {
 
 //event helpers
 function getStartPosition() {
-  params.shapeInfo.startPosition = stage.getPointerPosition();
-}
-
-function setDragSize() {
-  var startPosition = params.shapeInfo.startPosition;
-
-  params.shapeInfo.height = calculateDragHeight(startPosition);
-  params.shapeInfo.width = calculateDragWidth(startPosition);
+  params.startPosition = stage.getPointerPosition();
 }
 
 function calculateDragWidth(startPosition) {
@@ -180,18 +172,18 @@ function setCurrentTool(element) {
   });
 }
 
-function getCurrentTool(){
+function getCurrentTool() {
   var toolBar = getToolBar();
 
   var currentTool = toolBar.find(function (toolButton) {
-    if(toolButton.classList.contains("btn-selected")){
+    if (toolButton.classList.contains("btn-selected")) {
       return toolButton;
     }
   });
-   return currentTool.id;
+  return currentTool.id;
 }
 
-function getToolBar(){
+function getToolBar() {
   var toolBar = Array.from(
     document.getElementById("buttons").children
   );
@@ -267,7 +259,7 @@ function selectMultiple(background) {
 }
 
 function setSearchArea() {
-  var startPos = params.shapeInfo.startPosition;
+  var startPos = params.startPosition;
   var endPos = stage.getPointerPosition();
 
   var searchArea = {
@@ -341,25 +333,34 @@ function deleteElement(event) {
 }
 
 function removePrevious() {
-  var shapeInfo = params.shapeInfo;
-
-  if (shapeInfo.previousShape) {
-    var prev = shapeInfo.previousShape;
+  if (params.previousShape) {
+    var prev = params.previousShape;
     var layer = prev.getLayer();
 
     prev.destroy();
     layer.batchDraw();
+    params.previousShape = undefined;
   }
 }
 //Shape methods
+function getShapeInfo() {
+  var startPosition = params.startPosition;
+  var shapeInfo = {
+    startPosition: startPosition,
+    width: calculateDragWidth(startPosition),
+    height: calculateDragHeight(startPosition),
+    color: getCurrentColor()
+  }
+  return shapeInfo;
+}
+
 function drawShape() {
   var mainLayer = stage.findOne("#mainLayer");
   var background = stage.findOne("#background");
-  var shapeInfo = params.shapeInfo;
+
   var shape;
   var currentTool = getCurrentTool();
-
-  shapeInfo.color = params.currentColor;
+  var shapeInfo = getShapeInfo();
 
   switch (currentTool) {
     case "rect":
@@ -376,11 +377,11 @@ function drawShape() {
   toggleDraggable(shape);
 
   mainLayer.add(shape);
-  shapeInfo.previousShape = shape;
+  params.previousShape = shape;
 
   mainLayer.batchDraw();
 
-  if ( currentTool !== "select") {
+  if (currentTool !== "select") {
     params.selectGroup = [];
     params.selectGroup.push(shape);
   }
@@ -440,19 +441,31 @@ function getColorPalette() {
 
 function changeColor() {
   var layer = stage.findOne("#mainLayer");
-
+  var color = getCurrentColor();
   params.selectGroup.forEach(function (element) {
-    element.fill(params.currentColor);
+    element.fill(color);
   });
 
   layer.draw();
 
 }
 
+function getCurrentColor() {
+  var colorPalette = getColorPalette();
+
+  var currentColor = colorPalette.find(function (colorButton) {
+    if (colorButton.classList.contains("color-btn-selected")) {
+      return colorButton;
+    }
+  });
+
+  return currentColor.id;
+
+}
+
 function setCurrentColor(element) {
   var colorPalette = getColorPalette();
 
-  params.currentColor = element.id;
   colorPalette.forEach(function (color) {
     if (color === element) {
       color.classList.add("color-btn-selected");
@@ -463,38 +476,31 @@ function setCurrentColor(element) {
 }
 //Zindex methods
 
-function moveElement(element, event) {
+function moveElement(button, event) {
   var layer = stage.findOne("#mainLayer");
 
-  switch (element.id) {
-    case "move-to-back":
-      params.selectGroup.forEach(function (element) {
+  params.selectGroup.forEach(function (element) {
+    switch (button.id) {
+      case "move-to-back":
         element.moveToBottom();
-      });
-      break;
-    case "move-backward":
-      params.selectGroup.forEach(function (element) {
+        break;
+      case "move-backward":
         element.moveDown();
-      });
-      break;
-    case "move-forward":
-      params.selectGroup.forEach(function (element) {
+        break;
+      case "move-forward":
         element.moveUp();
-      });
-      break;
-    case "move-to-front":
-      params.selectGroup.forEach(function (element) {
+        break;
+      case "move-to-front":
         element.moveToTop();
-      });
-      break;
-  }
+        break;
+    }
+  });
   layer.draw();
 }
-
 //helper methods
 function toggleDraggable(element) {
-  var currentTool = getCurrentTool();
   element.addEventListener("mouseenter", function () {
+    var currentTool = getCurrentTool();
     if (currentTool !== "select") {
       this.draggable(false);
     } else {
