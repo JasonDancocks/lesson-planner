@@ -16,7 +16,8 @@ function setState() {
       tool: ["select", "rect", "circle", "delete"],
       color: ["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
       zindex: ["back", "backward", "forward", "front"],
-    }
+    },
+    previousShape: undefined,
   }
   return state;
 }
@@ -132,20 +133,40 @@ function addButtonClick(button, type) {
 /*
   Event handler methods
 */
+function resizeMousedown(target) {
+  var shapeGroup = target.getParent();
+  shapeGroup.setDraggable(false);
+  stage.listening(false);
+}
+
+function resizeDragmove() {
+  var shapeGroup = state.selectGroup[0];
+  var shape = getShapeFromShapeGroup(shapeGroup)[0];
+  var resizeAnchor = shapeGroup.get(".resize")[0];
+  var layer = stage.findOne("#mainLayer");
+  
+  var width = resizeAnchor.x() - shape.x();
+  var height = resizeAnchor.y() - shape.y();
+  
+  shape.width(width);
+  shape.height(height);
+
+  layer.draw();
+}
+
+function resizeDragend(target) {
+  var layer = target.getLayer();
+  var shapeGroup = target.getParent();
+  shapeGroup.setDraggable(true);
+  stage.listening(true);
+
+  layer.draw();
+}
+
 function stageMouseDown(event) {
-  if (event.target.name() === "resize") {
-    var shapeGroup = event.target.getParent();
-    var shape = getShapeFromShapeGroup(shapeGroup);
-    state.startPosition = {
-      x: shape[0].x(),
-      y: shape[0].y(),
-    }
-    console.log(state.startPosition);
-  } else {
-    state.startPosition = stage.getPointerPosition();
-    if (!event.evt.ctrlKey) {
-      clearSelectGroup();
-    }
+  state.startPosition = stage.getPointerPosition();
+  if (!event.evt.ctrlKey) {
+    clearSelectGroup();
   }
   state.isMouseDragging = true;
 }
@@ -157,9 +178,11 @@ function stageMouseMove(event) {
 }
 
 function stageMouseUp(event) {
+  if(state.isMouseDragging){
   state.isMouseDragging = false;
   useTool(event);
   state.previousShape = undefined;
+  }
 }
 
 function moveButtonClick(button) {
@@ -242,8 +265,7 @@ function clearSelectGroup() {
 function removePrevious() {
   if (state.previousShape) {
     var prev = state.previousShape;
-    var layer = prev.getLayer();
-
+    var layer = stage.findOne("#mainLayer");
     prev.destroy();
     layer.batchDraw();
     state.previousShape = undefined;
@@ -427,8 +449,18 @@ function createResizeButton(highlightBox) {
     stroke: "black",
     strokeWidth: 2,
     name: "resize",
+    draggable: true,
   });
 
+  resize.addEventListener("mousedown touchstart", function () {
+    resizeMousedown(this);
+  });
+  resize.addEventListener("dragmove", function () {
+    resizeDragmove(this);
+  });
+  resize.addEventListener("dragend", function () {
+    resizeDragend(this);
+  });
   return resize;
 }
 
