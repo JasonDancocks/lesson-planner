@@ -133,9 +133,19 @@ function addButtonClick(button, type) {
   Event handler methods
 */
 function stageMouseDown(event) {
-  state.startPosition = stage.getPointerPosition();
-  if (!event.evt.ctrlKey) {
-    clearSelectGroup();
+  if (event.target.name() === "resize") {
+    var shapeGroup = event.target.getParent();
+    var shape = getShapeFromShapeGroup(shapeGroup);
+    state.startPosition = {
+      x: shape[0].x(),
+      y: shape[0].y(),
+    }
+    console.log(state.startPosition);
+  } else {
+    state.startPosition = stage.getPointerPosition();
+    if (!event.evt.ctrlKey) {
+      clearSelectGroup();
+    }
   }
   state.isMouseDragging = true;
 }
@@ -238,6 +248,12 @@ function removePrevious() {
     layer.batchDraw();
     state.previousShape = undefined;
   }
+}
+
+function getShapeFromShapeGroup(shapeGroup) {
+  return shapeGroup.getChildren(function (node) {
+    return node.name() !== "highlightBox" && node.name() !== "resize";
+  });
 }
 
 /* 
@@ -528,9 +544,7 @@ function changeColor() {
   var layer = stage.findOne("#mainLayer");
   var color = state.currentColor;
   state.selectGroup.forEach(function (shapeGroup) {
-    var shape = shapeGroup.getChildren(function (node) {
-      return node.name() !== "highlightBox" && node.name() !== "resize";
-    });
+    var shape = getShapeFromShapeGroup(shapeGroup);
     shape.fill(color);
   });
   layer.draw();
