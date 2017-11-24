@@ -1,46 +1,37 @@
-
+*{
+  box-sizing: border-box;
+}
 #container{
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-content: center;
     
+    
   }
   #canvas-container {
-    
     border: 5px solid black;
-    width: 500px;
-    height: 500px;
+    margin: 10px;
+    width: fit-content;
   }
   
   .buttons{
-    display: flex;
+    display:flex;
+    border: 1px dashed black;
+    padding: 5px;
+    margin: 5px;
+    width:fit-content;
   }
 
-  
-  
+    
   .btn{
-    border: 1px solid red;
+    border: 1px solid black;
     padding: 5px;
     margin: 5px;
     
   }
   
   .btn-selected{
-    border:1px solid blue;
+    border:5px solid rgb(26, 152, 190);
   }
-  #color-palette{
-    display:flex;
-    border: 1px dashed black;
-    padding: 5px;
-  }
-  .color-btn{
-    border: 1px solid black;
-    margin: 5px;
-    padding: 5px;
-  }
-  .color-btn-selected{
-    border: 5px solid blue;
-    margin: 5px;
-    padding: 5px;
-  }
+  
