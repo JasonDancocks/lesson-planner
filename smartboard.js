@@ -7,8 +7,6 @@ Initialize methods - ran once
 */
 function setState() {
   var state = {
-    startPosition: {},
-    isMouseDragging: false,
     selectGroup: [],
     currentTool: "select",
     currentColor: null,
@@ -17,7 +15,7 @@ function setState() {
       color: ["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
       zindex: ["back", "backward", "forward", "front"],
     },
-    previousShape: undefined,
+    currentShape: undefined,
   }
   return state;
 }
@@ -144,10 +142,10 @@ function resizeDragmove() {
   var shape = getShapeFromShapeGroup(shapeGroup)[0];
   var resizeAnchor = shapeGroup.get(".resize")[0];
   var layer = stage.findOne("#mainLayer");
-  
+
   var width = resizeAnchor.x() - shape.x();
   var height = resizeAnchor.y() - shape.y();
-  
+
   shape.width(width);
   shape.height(height);
 
@@ -164,25 +162,30 @@ function resizeDragend(target) {
 }
 
 function stageMouseDown(event) {
-  state.startPosition = stage.getPointerPosition();
+  var startPos = stage.getPointerPosition();
+  drawShape(startPos);
   if (!event.evt.ctrlKey) {
     clearSelectGroup();
   }
-  state.isMouseDragging = true;
 }
 
 function stageMouseMove(event) {
-  if (state.isMouseDragging) {
-    useTool(event);
+  if (state.currentShape) {
+    var position = stage.getPointerPosition();
+    updateShape(position);
+    if (state.currentTool === "select") {
+      select(event);
+    }
   }
 }
 
+
 function stageMouseUp(event) {
-  if(state.isMouseDragging){
-  state.isMouseDragging = false;
-  useTool(event);
-  state.previousShape = undefined;
+  if (state.currentTool === "select") {
+    select(event);
+    removeSelectBox();
   }
+  state.currentShape = undefined;
 }
 
 function moveButtonClick(button) {
@@ -210,12 +213,12 @@ function setCurrent(selectedButton) {
       } else if (type === "color") {
         state.currentColor = selectedButton.id;
       }
-      toggleCurrentHighlight(type, selectedButton);
+      toggleButtonHighlight(type, selectedButton);
     }
   }
 }
-
-function toggleCurrentHighlight(type, selectedButton) {
+//set current helpers
+function toggleButtonHighlight(type, selectedButton) {
   var buttonBar = getButtonBar(type);
   buttonBar.forEach(function (button) {
     if (button.id === selectedButton.id) {
@@ -233,62 +236,12 @@ function getButtonBar(type) {
 }
 
 /* 
-Tool methods
-*/
-function useTool(event) {
-  var currentTool = state.currentTool;
-  removePrevious();
-
-  switch (currentTool) {
-    case "select":
-      selectElement(event);
-      break;
-    case "rect":
-      drawShape();
-      break;
-    case "circle":
-      drawShape();
-      break;
-  }
-  if (currentTool !== "select" && event.type === "mouseup") {
-    highlightSelected();
-  }
-  //defaultTool();
-}
-
-//Tool helpers
-function clearSelectGroup() {
-  state.selectGroup = [];
-  removeHighlight();
-}
-
-function removePrevious() {
-  if (state.previousShape) {
-    var prev = state.previousShape;
-    var layer = stage.findOne("#mainLayer");
-    prev.destroy();
-    layer.batchDraw();
-    state.previousShape = undefined;
-  }
-}
-
-function getShapeFromShapeGroup(shapeGroup) {
-  return shapeGroup.getChildren(function (node) {
-    return node.name() !== "highlightBox" && node.name() !== "resize";
-  });
-}
-
-/* 
 Select methods
 */
-function selectElement(event) {
-  var element = event.target;
+function select(event) {
   var background = stage.findOne("#background");
-
-  if (state.isMouseDragging === true) {
-    if (event.type === "mousemove") {
-      drawSelectBox();
-    }
+  var element = event.target;
+  if (event.type === "mousemove") {
     selectMultiple(background);
   } else {
     singleSelect(element, background);
@@ -321,25 +274,12 @@ function selectMultiple(background) {
 }
 
 //select helpers
-function drawSelectBox() {
-  var shapeInfo = getShapeInfo();
-  var layer = stage.findOne("#mainLayer");
+function removeSelectBox() {
+  var shape = state.currentShape;
+  var layer = shape.getLayer();
 
-  var shape = new Konva.Rect({
-    x: shapeInfo.startPosition.x,
-    y: shapeInfo.startPosition.y,
-    width: shapeInfo.width,
-    height: shapeInfo.height,
-    fill: null,
-    stroke: "black",
-    strokeWidth: 2,
-    dash: [10, 5],
-    id: "selectBox",
-    listening: false
-  });
-
-  layer.add(shape);
-  state.previousShape = shape;
+  shape.destroy();
+  layer.draw();
 }
 
 function toggleDraggable(element) {
@@ -353,8 +293,13 @@ function toggleDraggable(element) {
 }
 
 function setSearchArea() {
-  var startPos = state.startPosition;
-  var endPos = stage.getPointerPosition();
+  var shape = state.currentShape;
+  var startPos = shape.position();
+  var endPos = {
+    x: startPos.x + shape.width(),
+    y: startPos.y + shape.height(),
+  };
+
   var searchArea = {
     start: {
       x: Math.min(Math.floor(startPos.x), Math.ceil(endPos.x)),
@@ -397,7 +342,7 @@ function removeHighlight() {
 // create highlight elements
 function createHighlightGroup(element) {
   var highlightBox = createHighlightBox(element);
-  var resize = createResizeButton(highlightBox);
+  var resize = createResizeButton();
   var groupPos = getGroupPos(element);
   var group = new Konva.Group({
     x: groupPos.x,
@@ -415,15 +360,7 @@ function createHighlightGroup(element) {
 }
 // create helpers
 function createHighlightBox(element) {
-  var selectRect = element.getSelfRect();
-  var x = element.getAttr("x") + selectRect.x - 10;
-  var y = element.getAttr("y") + selectRect.y - 10;
-
   var rect = new Konva.Rect({
-    x: x,
-    y: y,
-    width: selectRect.width + 20,
-    height: selectRect.height + 20,
     fill: null,
     stroke: "black",
     strokeWidth: 2,
@@ -435,15 +372,8 @@ function createHighlightBox(element) {
   return rect;
 }
 
-function createResizeButton(highlightBox) {
-  var resizePos = {
-    x: highlightBox.x() + highlightBox.width(),
-    y: highlightBox.y() + highlightBox.height(),
-  }
-
+function createResizeButton() {
   var resize = new Konva.Circle({
-    x: resizePos.x,
-    y: resizePos.y,
     radius: 5,
     fill: "grey",
     stroke: "black",
@@ -490,40 +420,50 @@ function deleteElement() {
 }
 
 /*
-Shape methods
+Shape Drawing  methods
 */
-function drawShape() {
+function drawShape(startPos) {
   var layer = stage.findOne("#mainLayer");
-  var shapeInfo = getShapeInfo();
   var shape;
   var group;
 
   switch (state.currentTool) {
+    case "select":
+      shape = drawSelectBox();
+      break;
     case "rect":
-      shape = drawRect(shapeInfo);
+      shape = drawRect();
       break;
     case "circle":
-      shape = drawCircle(shapeInfo);
+      shape = drawCircle();
       break;
   }
 
-  group = createHighlightGroup(shape);
-  layer.add(group);
-  state.previousShape = group;
+  shape.position(startPos);
 
-  layer.batchDraw();
-
-  clearSelectGroup();
-  state.selectGroup.push(group);
+  if (state.currentTool === "select") {
+    updateStateCurrentShape(layer, shape);
+  } else {
+    group = createHighlightGroup(shape);
+    updateStateCurrentShape(layer, group);
+  }
 }
 
-function drawRect(shapeInfo) {
+function drawSelectBox() {
+  var shape = new Konva.Rect({
+    fill: null,
+    stroke: "black",
+    strokeWidth: 2,
+    dash: [10, 5],
+    id: "selectBox",
+    listening: false
+  });
+  return shape;
+}
+
+function drawRect() {
   var rect = new Konva.Rect({
-    x: shapeInfo.startPosition.x,
-    y: shapeInfo.startPosition.y,
-    width: shapeInfo.width,
-    height: shapeInfo.height,
-    fill: shapeInfo.color,
+    fill: state.currentColor,
     stroke: "black",
     strokeWidth: 4,
     name: "rect"
@@ -531,12 +471,9 @@ function drawRect(shapeInfo) {
   return rect;
 }
 
-function drawCircle(shapeInfo) {
+function drawCircle() {
   var circle = new Konva.Circle({
-    x: shapeInfo.startPosition.x,
-    y: shapeInfo.startPosition.y,
-    radius: calculateRadius(shapeInfo),
-    fill: shapeInfo.color,
+    fill: state.currentColor,
     stroke: "black",
     strokeWidth: 4,
     name: "circle"
@@ -545,28 +482,107 @@ function drawCircle(shapeInfo) {
 }
 
 //shape helpers
-function getShapeInfo() {
-  var shapeInfo = {
-    startPosition: state.startPosition,
-    width: calculateDragWidth(),
-    height: calculateDragHeight(),
-    color: state.currentColor
-  }
-  return shapeInfo;
-}
 
-function calculateRadius(shapeInfo) {
+function calculateRadius(width, height) {
   return Math.sqrt(
-    Math.pow(shapeInfo.width, 2) + Math.pow(shapeInfo.height, 2)
+    Math.pow(width, 2) + Math.pow(height, 2)
   );
 }
 
-function calculateDragWidth() {
-  return stage.getPointerPosition().x - state.startPosition.x;
+function updateStateCurrentShape(layer, shape) {
+  layer.add(shape);
+  state.currentShape = shape;
 }
 
-function calculateDragHeight() {
-  return stage.getPointerPosition().y - state.startPosition.y;
+// update shape methods
+function updateShape(position) {
+  var shapeObject = getCurrentShape();
+  var layer = shapeObject.shape.getLayer();
+
+  setShapeSize(position, shapeObject.shape);
+
+  if (shapeObject.highlightBox) {
+    updateHighlightElements(shapeObject);
+  }
+  layer.batchDraw();
+}
+function getCurrentShape() {
+  var shape,
+    highlightBox,
+    resize;
+
+  if (state.currentTool === "select") {
+    shape = state.currentShape;
+  } else {
+    shape = getShapeFromShapeGroup(state.currentShape)[0];
+    highlightBox = state.currentShape.findOne(".highlightBox");
+    resize = state.currentShape.findOne(".resize");
+  }
+
+  return {
+    shape: shape,
+    highlightBox: highlightBox,
+    resize: resize,
+  }
+}
+
+function setShapeSize(position, shape) {
+  var width = position.x - shape.x();
+  var height = position.y - shape.y();
+
+  if (shape.getClassName() === "Circle") {
+    var radius = calculateRadius(width, height);
+    shape.radius(radius);
+  } else {
+    shape.width(width);
+    shape.height(height);
+  }
+}
+
+function updateHighlightElements(shapeObject) {
+  var shape = shapeObject.shape;
+  var highlightBox = shapeObject.highlightBox;
+  var resize = shapeObject.resize;
+
+  updateHighlightBox(shape,highlightBox);
+  updateResizeAnchor(highlightBox,resize);
+}
+
+function updateHighlightBox(shape,highlightBox){
+  var selectRect = shape.getSelfRect();
+  var highlightBoxWidth = selectRect.width + 20;
+  var highlightBoxHeight = selectRect.height + 20;
+  var highlightBoxPosition = {
+    x: shape.x() + selectRect.x - 10,
+    y: shape.y() + selectRect.y - 10,
+  };
+
+  highlightBox.width(highlightBoxWidth);
+  highlightBox.height(highlightBoxHeight);
+  highlightBox.position(highlightBoxPosition);
+}
+
+function updateResizeAnchor(highlightBox,resize){
+  var resizePos = {
+    x: highlightBox.x() + highlightBox.width(),
+    y: highlightBox.y() + highlightBox.height(),
+  }
+  resize.position(resizePos);
+}
+
+
+
+
+//Tool helpers
+function clearSelectGroup() {
+  state.selectGroup = [];
+  removeHighlight();
+}
+
+function getShapeFromShapeGroup(shapeGroup) {
+  return shapeGroup.getChildren(function (node) {
+    return node.name() !== "highlightBox" && node.name() !== "resize";
+  });
 }
 
 /*
