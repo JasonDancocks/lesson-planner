@@ -573,7 +573,7 @@ function updateHighlightElements(shapeObject) {
 
   updateHighlightBox(shape, highlightBox);
   updateResizeAnchor(highlightBox, resize);
-  updateRotateAnchor(shape, highlightBox, rotate);
+  updateRotateAnchor(shape, rotate);
 }
 
 function updateHighlightBox(shape, highlightBox) {
@@ -599,7 +599,7 @@ function updateResizeAnchor(highlightBox, resize) {
 }
 function updateRotateAnchor(shape, rotate) {
   var rotatePos = {
-    x: shape.x() + shape.width() /2,
+    x: shape.x() + (shape.width() /2),
     y: shape.y()-25,
   }
   rotate.position(rotatePos);
