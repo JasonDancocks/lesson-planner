@@ -334,7 +334,7 @@ function highlightSelected() {
 
   removeHighlight();
   state.selectGroup.forEach(function (group) {
-    highlightElements = group.find(".highlightBox, .resize");
+    highlightElements = group.find(".highlightBox, .resize, .rotate");
     highlightElements.forEach(function (element) {
       element.visible(true);
     });
@@ -344,7 +344,7 @@ function highlightSelected() {
 }
 
 function removeHighlight() {
-  var highlightElements = stage.find(".highlightBox, .resize");
+  var highlightElements = stage.find(".highlightBox, .resize, .rotate");
   highlightElements.forEach(function (element) {
     element.visible(false);
   });
@@ -354,6 +354,7 @@ function removeHighlight() {
 function createHighlightGroup(element) {
   var highlightBox = createHighlightBox(element);
   var resize = createResizeButton();
+  var rotate = createRotateButton();
   var groupPos = getGroupPos(element);
   var group = new Konva.Group({
     x: groupPos.x,
@@ -366,6 +367,7 @@ function createHighlightGroup(element) {
   if (state.currentTool !== "select") {
     group.add(highlightBox);
     group.add(resize);
+    group.add(rotate);
     toggleDraggable(group);
   }
   return group;
@@ -404,6 +406,28 @@ function createResizeButton() {
     resizeDragend(this);
   });
   return resize;
+}
+
+function createRotateButton(){
+  var rotate = new Konva.Circle({
+    radius: 5,
+    fill: "green",
+    stroke: "black",
+    strokeWidth: 2,
+    name: "rotate",
+    draggable: true,
+  });
+
+  rotate.addEventListener("mousedown touchstart", function () {
+    rotateMousedown(this);
+  });
+  rotate.addEventListener("dragmove", function () {
+    rotateDragmove(this);
+  });
+  rotate.addEventListener("dragend", function () {
+    rotateDragend(this);
+  });
+  return rotate;
 }
 
 function getGroupPos(element) {
@@ -519,11 +543,12 @@ function getCurrentShape() {
   var shape = getShapeFromShapeGroup(state.currentShape);
   var highlightBox = state.currentShape.findOne(".highlightBox");
   var resize = state.currentShape.findOne(".resize");
-
+  var rotate = state.currentShape.findOne(".rotate");
   return {
     shape: shape,
     highlightBox: highlightBox,
     resize: resize,
+    rotate: rotate,
   }
 }
 
@@ -544,9 +569,11 @@ function updateHighlightElements(shapeObject) {
   var shape = shapeObject.shape;
   var highlightBox = shapeObject.highlightBox;
   var resize = shapeObject.resize;
+  var rotate = shapeObject.rotate;
 
   updateHighlightBox(shape, highlightBox);
   updateResizeAnchor(highlightBox, resize);
+  updateRotateAnchor(shape, highlightBox, rotate);
 }
 
 function updateHighlightBox(shape, highlightBox) {
@@ -569,6 +596,13 @@ function updateResizeAnchor(highlightBox, resize) {
     y: highlightBox.y() + highlightBox.height(),
   }
   resize.position(resizePos);
+}
+function updateRotateAnchor(shape, rotate) {
+  var rotatePos = {
+    x: shape.x() + shape.width() /2,
+    y: shape.y()-25,
+  }
+  rotate.position(rotatePos);
 }
 
 //Tool helpers
