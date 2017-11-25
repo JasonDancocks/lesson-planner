@@ -1,10 +1,10 @@
 var state = setState();
 var stage = setStage();
 initialize();
-
+ 
 /*
   Bugs :
-    Resize circle needs fixing - circle expands to meet pointer on resize.
+    Resize circle needs fixing  - circle expands to meet pointer on resize.
 */
 /*
 Initialize methods - ran once
