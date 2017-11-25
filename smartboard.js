@@ -3,6 +3,10 @@ var stage = setStage();
 initialize();
 
 /*
+  Bugs :
+    Resize circle needs fixing - circle expands to meet pointer on resize.
+*/
+/*
 Initialize methods - ran once
 */
 function setState() {
@@ -98,7 +102,9 @@ function createButton(id, type) {
   var button = document.createElement("div");
   button.id = id;
   button.classList.add("btn");
-
+  if (id === "select"){
+    button.classList.add("btn-selected");
+  }
   if (type === "color") {
     button.style.backgroundColor = id;
   } else {
@@ -131,34 +137,39 @@ function addButtonClick(button, type) {
 /*
   Event handler methods
 */
-function resizeMousedown(target) {
-  var shapeGroup = target.getParent();
-  shapeGroup.setDraggable(false);
-  stage.listening(false);
+function setResizeDragBounds() {
+  var resize = state.currentShape.findOne(".resize");
+  var shape = getShapeFromShapeGroup(state.currentShape);
+
+  resize.dragBoundFunc(function (pos) {
+    var x = Math.max(pos.x, shape.x());
+    var y = Math.max(pos.y, shape.y());
+
+    return {
+      x: x,
+      y: y,
+    }
+  });
 }
 
-function resizeDragmove() {
-  var shapeGroup = state.selectGroup[0];
-  var shape = getShapeFromShapeGroup(shapeGroup)[0];
-  var resizeAnchor = shapeGroup.get(".resize")[0];
-  var layer = stage.findOne("#mainLayer");
+function resizeMousedown(target) {
+  var shapeGroup = target.getParent();
+  shapeGroup.draggable(false);
+  stage.listening(false);
+  state.currentShape = shapeGroup;
+  setResizeDragBounds();
+}
 
-  var width = resizeAnchor.x() - shape.x();
-  var height = resizeAnchor.y() - shape.y();
-
-  shape.width(width);
-  shape.height(height);
-
-  layer.draw();
+function resizeDragmove(target) {
+  var position = target.position();
+  updateShape(position);
 }
 
 function resizeDragend(target) {
-  var layer = target.getLayer();
   var shapeGroup = target.getParent();
-  shapeGroup.setDraggable(true);
+  shapeGroup.draggable(true);
+  state.currentShape = undefined;
   stage.listening(true);
-
-  layer.draw();
 }
 
 function stageMouseDown(event) {
@@ -293,7 +304,7 @@ function toggleDraggable(element) {
 }
 
 function setSearchArea() {
-  var shape = state.currentShape;
+  var shape = getShapeFromShapeGroup(state.currentShape);
   var startPos = shape.position();
   var endPos = {
     x: startPos.x + shape.width(),
@@ -350,12 +361,13 @@ function createHighlightGroup(element) {
     name: "selected"
   });
 
-  group.add(highlightBox);
   group.add(element);
-  group.add(resize);
 
-  toggleDraggable(group);
-
+  if (state.currentTool !== "select") {
+    group.add(highlightBox);
+    group.add(resize);
+    toggleDraggable(group);
+  }
   return group;
 }
 // create helpers
@@ -440,13 +452,9 @@ function drawShape(startPos) {
   }
 
   shape.position(startPos);
+  group = createHighlightGroup(shape);
 
-  if (state.currentTool === "select") {
-    updateStateCurrentShape(layer, shape);
-  } else {
-    group = createHighlightGroup(shape);
-    updateStateCurrentShape(layer, group);
-  }
+  updateStateCurrentShape(layer, group);
 }
 
 function drawSelectBox() {
@@ -506,18 +514,11 @@ function updateShape(position) {
   }
   layer.batchDraw();
 }
-function getCurrentShape() {
-  var shape,
-    highlightBox,
-    resize;
 
-  if (state.currentTool === "select") {
-    shape = state.currentShape;
-  } else {
-    shape = getShapeFromShapeGroup(state.currentShape)[0];
-    highlightBox = state.currentShape.findOne(".highlightBox");
-    resize = state.currentShape.findOne(".resize");
-  }
+function getCurrentShape() {
+  var shape = getShapeFromShapeGroup(state.currentShape);
+  var highlightBox = state.currentShape.findOne(".highlightBox");
+  var resize = state.currentShape.findOne(".resize");
 
   return {
     shape: shape,
@@ -544,11 +545,11 @@ function updateHighlightElements(shapeObject) {
   var highlightBox = shapeObject.highlightBox;
   var resize = shapeObject.resize;
 
-  updateHighlightBox(shape,highlightBox);
-  updateResizeAnchor(highlightBox,resize);
+  updateHighlightBox(shape, highlightBox);
+  updateResizeAnchor(highlightBox, resize);
 }
 
-function updateHighlightBox(shape,highlightBox){
+function updateHighlightBox(shape, highlightBox) {
   var selectRect = shape.getSelfRect();
   var highlightBoxWidth = selectRect.width + 20;
   var highlightBoxHeight = selectRect.height + 20;
@@ -562,16 +563,13 @@ function updateHighlightBox(shape,highlightBox){
   highlightBox.position(highlightBoxPosition);
 }
 
-function updateResizeAnchor(highlightBox,resize){
+function updateResizeAnchor(highlightBox, resize) {
   var resizePos = {
     x: highlightBox.x() + highlightBox.width(),
     y: highlightBox.y() + highlightBox.height(),
   }
   resize.position(resizePos);
 }
-
-
-
 
 //Tool helpers
 function clearSelectGroup() {
@@ -582,9 +580,13 @@ function clearSelectGroup() {
 function getShapeFromShapeGroup(shapeGroup) {
   return shapeGroup.getChildren(function (node) {
     return node.name() !== "highlightBox" && node.name() !== "resize";
-  });
+  })[0];
 }
 
+function getHighlightBoxFromShape(shape){
+  var shapeGroup = shape.getParent();
+  return shapeGroup.findOne(".highlightBox");
+}
 /*
 Color methods
 */
