@@ -20,6 +20,7 @@ function setState() {
       zindex: ["back", "backward", "forward", "front"],
     },
     currentShape: undefined,
+    isEditing: false,
   }
   return state;
 }
@@ -157,32 +158,32 @@ function setRotateDragBounds(rotate) {
   rotate.dragBoundFunc(function (pos) {
     //get centre point
     var x,
-        y,
-        radius,
-        scale;
+      y,
+      radius,
+      scale;
 
-    if (shape.getClassName() === "Circle"){
-    x = shape.x();
-    y = shape.y();
-    radius = shape.radius() + 25;
+    if (shape.getClassName() === "Circle") {
+      x = shape.x();
+      y = shape.y();
+      radius = shape.radius() + 25;
 
     } else {
-      x = shape.x() + shape.width()/ 2;
-      y = shape.y() + shape.height()/ 2;
-      radius = calculateRadius(shape.height()/2, shape.height()/2);
-    } 
-   
+      x = shape.width();
+      y = shape.height();
+      radius = shape.height() / 2 + 25;
+    }
+
     scale = radius / Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
     //check if anchor is on circle
-    if (scale === 1 ){
+    if (scale === 1) {
       return pos;
     } else {
       return {
         y: Math.round((pos.y - y) * scale + y),
         x: Math.round((pos.x - x) * scale + x)
-    };
+      };
     }
-    
+
   });
 }
 
@@ -190,27 +191,61 @@ function prepareShapeForEdit(target) {
   var shapeGroup = target.getParent();
   shapeGroup.draggable(false);
   state.currentShape = shapeGroup;
+  state.isEditing = true;
 }
 
 function endShapeEdit(target) {
   var shapeGroup = target.getParent();
   shapeGroup.draggable(true);
   state.currentShape = undefined;
+  state.isEditing = false;
   stage.listening(true);
 }
 
 function rotateMousedown(target) {
+  var shapeGroup = target.getParent();
+  var layer = shapeGroup.getLayer();
+  var shape = getShapeFromShapeGroup(shapeGroup);
+  var newX,
+    newY,
+    offsetX,
+    offsetY;
+
   prepareShapeForEdit(target);
   setRotateDragBounds(target);
+  if (shape.getClassName() === "Rect") {
+    offsetX = shape.width()/2;
+    offsetY = shape.height()/2;
+
+    newX = shape.x() + offsetX;
+    newY = shape.y() + offsetY;
+
+    shape.x(newX);
+    shape.y(newY);
+    
+    shape.offsetX(shape.width() / 2);
+    shape.offsetY(shape.height() / 2);
+
+  }
+
+ 
 }
 
 function rotateDragstart() {
   stage.listening(false);
 }
 
-function rotateDragmove(target) {}
+function rotateDragmove(target) {
+  var shapeGroup = target.getParent();
+  var layer = shapeGroup.getLayer();
+  var shape = getShapeFromShapeGroup(shapeGroup);
 
-function rotateDragend(target) {
+  shape.rotate(1);
+
+  layer.draw();
+}
+
+function rotateDragend(target) {1
   endShapeEdit(target);
 }
 
@@ -248,8 +283,8 @@ function stageMouseDown(event) {
 }
 
 function stageMouseMove(event) {
-  console.log("stage mousemove");
-  if (state.currentShape) {
+
+  if (state.currentShape && !state.isEditing) {
     var position = stage.getPointerPosition();
     updateShape(position);
     if (state.currentTool === "select") {
