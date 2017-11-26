@@ -1,7 +1,7 @@
 var state = setState();
 var stage = setStage();
 initialize();
- 
+
 /*
   Bugs :
     Resize circle needs fixing  - circle expands to meet pointer on resize.
@@ -102,7 +102,7 @@ function createButton(id, type) {
   var button = document.createElement("div");
   button.id = id;
   button.classList.add("btn");
-  if (id === "select"){
+  if (id === "select") {
     button.classList.add("btn-selected");
   }
   if (type === "color") {
@@ -155,7 +155,6 @@ function setResizeDragBounds() {
 function resizeMousedown(target) {
   var shapeGroup = target.getParent();
   shapeGroup.draggable(false);
-  stage.listening(false);
   state.currentShape = shapeGroup;
   setResizeDragBounds();
 }
@@ -163,6 +162,9 @@ function resizeMousedown(target) {
 function resizeDragmove(target) {
   var position = target.position();
   updateShape(position);
+}
+function resizeDragstart(){
+  stage.listening(false);
 }
 
 function resizeDragend(target) {
@@ -173,10 +175,15 @@ function resizeDragend(target) {
 }
 
 function stageMouseDown(event) {
-  var startPos = stage.getPointerPosition();
-  drawShape(startPos);
-  if (!event.evt.ctrlKey) {
-    clearSelectGroup();
+  var target = event.target;
+  if (target.name() === "resize") {
+    resizeMousedown(target);
+  } else {
+    var startPos = stage.getPointerPosition();
+    drawShape(startPos);
+    if (!event.evt.ctrlKey) {
+      clearSelectGroup();
+    }
   }
 }
 
@@ -192,7 +199,7 @@ function stageMouseMove(event) {
 
 
 function stageMouseUp(event) {
-  if (state.currentTool === "select") {
+  if (state.currentTool === "select" && event.target.name()!== "resize") {
     select(event);
     removeSelectBox();
   }
@@ -396,19 +403,19 @@ function createResizeButton() {
     draggable: true,
   });
 
-  resize.addEventListener("mousedown touchstart", function () {
-    resizeMousedown(this);
-  });
   resize.addEventListener("dragmove", function () {
     resizeDragmove(this);
   });
   resize.addEventListener("dragend", function () {
     resizeDragend(this);
   });
+  resize.addEventListener("dragstart", function(){
+    resizeDragstart();
+  });
   return resize;
 }
 
-function createRotateButton(){
+function createRotateButton() {
   var rotate = new Konva.Circle({
     radius: 5,
     fill: "green",
@@ -597,10 +604,11 @@ function updateResizeAnchor(highlightBox, resize) {
   }
   resize.position(resizePos);
 }
+
 function updateRotateAnchor(shape, rotate) {
   var rotatePos = {
-    x: shape.x() + (shape.width() /2),
-    y: shape.y()-25,
+    x: shape.x() + (shape.width() / 2),
+    y: shape.y() - 25,
   }
   rotate.position(rotatePos);
 }
@@ -617,7 +625,7 @@ function getShapeFromShapeGroup(shapeGroup) {
   })[0];
 }
 
-function getHighlightBoxFromShape(shape){
+function getHighlightBoxFromShape(shape) {
   var shapeGroup = shape.getParent();
   return shapeGroup.findOne(".highlightBox");
 }
