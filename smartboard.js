@@ -163,7 +163,8 @@ function resizeDragmove(target) {
   var position = target.position();
   updateShape(position);
 }
-function resizeDragstart(){
+
+function resizeDragstart() {
   stage.listening(false);
 }
 
@@ -199,7 +200,7 @@ function stageMouseMove(event) {
 
 
 function stageMouseUp(event) {
-  if (state.currentTool === "select" && event.target.name()!== "resize") {
+  if (state.currentTool === "select" && event.target.name() !== "resize") {
     select(event);
     removeSelectBox();
   }
@@ -409,7 +410,7 @@ function createResizeButton() {
   resize.addEventListener("dragend", function () {
     resizeDragend(this);
   });
-  resize.addEventListener("dragstart", function(){
+  resize.addEventListener("dragstart", function () {
     resizeDragstart();
   });
   return resize;
@@ -606,9 +607,18 @@ function updateResizeAnchor(highlightBox, resize) {
 }
 
 function updateRotateAnchor(shape, rotate) {
-  var rotatePos = {
-    x: shape.x() + (shape.width() / 2),
-    y: shape.y() - 25,
+  var rotatePos;
+  if (shape.getClassName() === "Circle") {
+    rotatePos = {
+      x: shape.x(),
+      y: shape.y() - shape.radius() - 25,
+
+    }
+  } else {
+    rotatePos = {
+      x: shape.x() + (shape.width() / 2),
+      y: shape.y() - 25,
+    }
   }
   rotate.position(rotatePos);
 }
