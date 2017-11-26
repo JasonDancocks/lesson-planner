@@ -137,8 +137,7 @@ function addButtonClick(button, type) {
 /*
   Event handler methods
 */
-function setResizeDragBounds() {
-  var resize = state.currentShape.findOne(".resize");
+function setResizeDragBounds(resize) {
   var shape = getShapeFromShapeGroup(state.currentShape);
 
   resize.dragBoundFunc(function (pos) {
@@ -152,11 +151,72 @@ function setResizeDragBounds() {
   });
 }
 
-function resizeMousedown(target) {
+function setRotateDragBounds(rotate) {
+  var shape = getShapeFromShapeGroup(state.currentShape);
+
+  rotate.dragBoundFunc(function (pos) {
+    //get centre point
+    var x,
+        y,
+        radius,
+        scale;
+
+    if (shape.getClassName() === "Circle"){
+    x = shape.x();
+    y = shape.y();
+    radius = shape.radius() + 25;
+
+    } else {
+      x = shape.x() + shape.width()/ 2;
+      y = shape.y() + shape.height()/ 2;
+      radius = calculateRadius(shape.height()/2, shape.height()/2);
+    } 
+   
+    scale = radius / Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+    //check if anchor is on circle
+    if (scale === 1 ){
+      return pos;
+    } else {
+      return {
+        y: Math.round((pos.y - y) * scale + y),
+        x: Math.round((pos.x - x) * scale + x)
+    };
+    }
+    
+  });
+}
+
+function prepareShapeForEdit(target) {
   var shapeGroup = target.getParent();
   shapeGroup.draggable(false);
   state.currentShape = shapeGroup;
-  setResizeDragBounds();
+}
+
+function endShapeEdit(target) {
+  var shapeGroup = target.getParent();
+  shapeGroup.draggable(true);
+  state.currentShape = undefined;
+  stage.listening(true);
+}
+
+function rotateMousedown(target) {
+  prepareShapeForEdit(target);
+  setRotateDragBounds(target);
+}
+
+function rotateDragstart() {
+  stage.listening(false);
+}
+
+function rotateDragmove(target) {}
+
+function rotateDragend(target) {
+  endShapeEdit(target);
+}
+
+function resizeMousedown(target) {
+  prepareShapeForEdit(target);
+  setResizeDragBounds(target);
 }
 
 function resizeDragmove(target) {
@@ -169,16 +229,15 @@ function resizeDragstart() {
 }
 
 function resizeDragend(target) {
-  var shapeGroup = target.getParent();
-  shapeGroup.draggable(true);
-  state.currentShape = undefined;
-  stage.listening(true);
+  endShapeEdit(target);
 }
 
 function stageMouseDown(event) {
   var target = event.target;
   if (target.name() === "resize") {
     resizeMousedown(target);
+  } else if (target.name() === "rotate") {
+    rotateMousedown(target);
   } else {
     var startPos = stage.getPointerPosition();
     drawShape(startPos);
@@ -189,6 +248,7 @@ function stageMouseDown(event) {
 }
 
 function stageMouseMove(event) {
+  console.log("stage mousemove");
   if (state.currentShape) {
     var position = stage.getPointerPosition();
     updateShape(position);
@@ -200,7 +260,7 @@ function stageMouseMove(event) {
 
 
 function stageMouseUp(event) {
-  if (state.currentTool === "select" && event.target.name() !== "resize") {
+  if (state.currentTool === "select" && event.target.name() !== "resize" && event.target.name() !== "rotate") {
     select(event);
     removeSelectBox();
   }
@@ -403,16 +463,16 @@ function createResizeButton() {
     name: "resize",
     draggable: true,
   });
-
+  resize.addEventListener("dragstart", function () {
+    resizeDragstart();
+  });
   resize.addEventListener("dragmove", function () {
     resizeDragmove(this);
   });
   resize.addEventListener("dragend", function () {
     resizeDragend(this);
   });
-  resize.addEventListener("dragstart", function () {
-    resizeDragstart();
-  });
+
   return resize;
 }
 
@@ -426,8 +486,8 @@ function createRotateButton() {
     draggable: true,
   });
 
-  rotate.addEventListener("mousedown touchstart", function () {
-    rotateMousedown(this);
+  rotate.addEventListener("dragstart", function () {
+    rotateDragstart();
   });
   rotate.addEventListener("dragmove", function () {
     rotateDragmove(this);
@@ -631,7 +691,7 @@ function clearSelectGroup() {
 
 function getShapeFromShapeGroup(shapeGroup) {
   return shapeGroup.getChildren(function (node) {
-    return node.name() !== "highlightBox" && node.name() !== "resize";
+    return node.name() !== "highlightBox" && node.name() !== "resize" && node.name() !== "rotate";
   })[0];
 }
 
