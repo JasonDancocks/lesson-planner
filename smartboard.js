@@ -157,23 +157,10 @@ function setRotateDragBounds(rotate) {
 
   rotate.dragBoundFunc(function (pos) {
     //get centre point
-    var x,
-      y,
-      radius,
-      scale;
-
-    if (shape.getClassName() === "Circle") {
-      x = shape.x();
-      y = shape.y();
-      radius = shape.radius() + 25;
-
-    } else {
-      x = shape.width();
-      y = shape.height();
-      radius = shape.height() / 2 + 25;
-    }
-
-    scale = radius / Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+    var x = shape.x();
+    var y = shape.y();
+    var radius = shape.height() / 2 + 25;
+    var scale = radius / Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
     //check if anchor is on circle
     if (scale === 1) {
       return pos;
@@ -206,6 +193,8 @@ function rotateMousedown(target) {
   var shapeGroup = target.getParent();
   var layer = shapeGroup.getLayer();
   var shape = getShapeFromShapeGroup(shapeGroup);
+  var highlightBox = shapeGroup.findOne(".highlightBox");
+  var elementsToRotate = [shape, highlightBox];
   var newX,
     newY,
     offsetX,
@@ -213,39 +202,75 @@ function rotateMousedown(target) {
 
   prepareShapeForEdit(target);
   setRotateDragBounds(target);
-  if (shape.getClassName() === "Rect") {
-    offsetX = shape.width()/2;
-    offsetY = shape.height()/2;
+  elementsToRotate.forEach(function (shape) {
+    if (shape.getClassName() === "Rect" && shape.offsetX() === 0) {
+      offsetX = shape.width() / 2;
+      offsetY = shape.height() / 2;
 
-    newX = shape.x() + offsetX;
-    newY = shape.y() + offsetY;
+      newX = shape.x() + offsetX;
+      newY = shape.y() + offsetY;
 
-    shape.x(newX);
-    shape.y(newY);
-    
-    shape.offsetX(shape.width() / 2);
-    shape.offsetY(shape.height() / 2);
+      shape.x(newX);
+      shape.y(newY);
 
-  }
+      shape.offsetX(shape.width() / 2);
+      shape.offsetY(shape.height() / 2);
 
- 
+    }
+  });
+  state.rotateStartPos = stage.getPointerPosition();
+
 }
 
 function rotateDragstart() {
   stage.listening(false);
 }
 
+function calculateRotationAngle(target, shape) {
+  var radius = shape.height() / 2 + 25;
+  var startPosX = state.rotateStartPos.x;
+  var startPosY = state.rotateStartPos.y;
+  var currentX = target.x();
+  var currentY = target.y();
+  var directionModifier;
+  if (currentX > startPosX) {
+    directionModifier = 1;
+  } else {
+    directionModifier = -1;
+  }
+  var distanceBetweenPoints2 = Math.pow(currentX - startPosX, 2) + Math.pow(currentY - startPosY, 2);
+  var radius2 = Math.pow(radius, 2);
+  //cosine rule
+  var numerator = 2 * radius2 - distanceBetweenPoints2;
+  var denominator = 2 * radius2;
+  var quotient = numerator / denominator;
+  quotient = Math.max(quotient, -1);
+  var angle = Math.acos(quotient);
+  var angleInDegrees = directionModifier * angle * 180 / Math.PI;
+
+  return angleInDegrees;
+
+}
+
 function rotateDragmove(target) {
   var shapeGroup = target.getParent();
   var layer = shapeGroup.getLayer();
   var shape = getShapeFromShapeGroup(shapeGroup);
+  var highlightBox = shapeGroup.findOne(".highlightBox");
+  var angle = calculateRotationAngle(target, shape);
 
-  shape.rotate(1);
-
+  shape.rotation(angle);
+  highlightBox.rotation(angle);
   layer.draw();
 }
 
-function rotateDragend(target) {1
+function rotateDragend(target) {
+  var shape = getShapeFromShapeGroup(state.currentShape);
+
+  if (shape.getClassName() === "Rect") {
+    var newX = shape.x() - shape.offsetX();
+    var newY = shape.y() - shape.offsetY();
+  }
   endShapeEdit(target);
 }
 
